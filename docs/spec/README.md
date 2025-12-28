@@ -11,8 +11,14 @@
 7. `revenue_billing.md` 収益/請求
 8. `features_screens.md` 画面/機能概要
 9. `user_flows.md` ユーザーストーリー
-10. `integrations_io.md` 外部連携/データ入出力
-11. `data_model.md` データモデル概要
-12. `api_overview.md` API 概要（参考）
-13. `tests.md` テスト方針
-14. `open_issues.md` 要検討事項
+10. `auth_routing.md` 認証/遷移ルール
+11. `integrations_io.md` 外部連携/データ入出力
+12. `data_model.md` データモデル概要
+13. `api_overview.md` API 概要（参考）
+14. `api_contract.md` API 契約（BigInt/ownership）
+15. `openapi_min.yaml` OpenAPI（最小）
+16. `tests.md` テスト方針
+17. `notifications.md` 通知仕様
+18. `billing_operations.md` 請求運用
+19. `api_missing.md` 未実装API設計
+20. `open_issues.md` 要検討事項

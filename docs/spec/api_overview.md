@@ -1,12 +1,41 @@
 # API 概要（参考）
 
+- `POST /drivers` ドライバー登録
+- `PATCH /drivers/{id}` ドライバー更新
+- `DELETE /drivers/{id}` ドライバー論理削除
+- `POST /drivers/{id}/invite` ドライバー招待
+- `POST /driver-invitations/accept` ドライバー招待受諾
 - `POST /drivers/{id}/advances` 前借り申請
+- `GET /companies/{id}/settings` 会社設定取得
 - `POST /advances/{id}/approve` 承認
 - `POST /advances/{id}/reject` 却下
 - `POST /advances/{id}/payout-instruct` 振込指示登録
 - `POST /advances/{id}/mark-paid` 振込完了
+- `POST /advances/{id}/write-off` 貸倒処理
+- `POST /payrolls/{id}/collection-override` 回収額上書き
+- `POST /drivers/{id}/compensation-loans` 補償金額の貸付
 - `POST /payrolls/import` 給与 CSV
 - `POST /earnings/import` 報酬 CSV
+- `GET /exports/driver-balances` 残高 CSV
+- `GET /exports/monthly-metrics` 月次集計 CSV
 - `POST /admin/batch/daily` 日次バッチ
+- `POST /admin/sla/check` SLA チェック
+- `POST /notifications/list` 通知一覧
+- `POST /notifications/mark-all-read` 通知一括既読
 - `GET /drivers/{id}/dashboard` D ダッシュボード
 - `GET /companies/{id}/dashboard` C ダッシュボード
+- `POST /users` ユーザー登録
+- `GET /users` ユーザー一覧
+- `PATCH /users/{id}` ユーザー更新
+- `DELETE /users/{id}` ユーザー無効化
+- `POST /onboarding/company` 会社導入
+- `POST /billing/preview` 請求プレビュー
+- `POST /billing/run` 請求実行（請求記録作成）
+- `POST /stripe/customers` Stripe 顧客作成
+- `POST /stripe/invoices/finalize` Stripe 請求確定
+- `POST /stripe/invoices/send` Stripe 請求送信
+- `POST /stripe/webhook` Stripe Webhook
+- `POST /auth/login` ログイン
+- `POST /auth/password/reset` パスワード再発行
+- `POST /auth/password/reset/confirm` パスワード再設定
+- `POST /auth/id/remind` ID リマインド

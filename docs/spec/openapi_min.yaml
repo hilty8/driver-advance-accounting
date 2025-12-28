@@ -1,0 +1,454 @@
+openapi: 3.0.3
+info:
+  title: Driver Advance Accounting API (Minimal)
+  version: 0.1.0
+servers:
+  - url: http://localhost:3000
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          nullable: true
+    LoginResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          type: object
+          required: [id, email, role]
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            role:
+              type: string
+            companyId:
+              type: string
+              nullable: true
+            driverId:
+              type: string
+              nullable: true
+    Advance:
+      type: object
+      required: [id, driverId, companyId, requestedAmount, status]
+      properties:
+        id:
+          type: string
+        driverId:
+          type: string
+        companyId:
+          type: string
+        requestedAmount:
+          type: string
+          description: BigInt as string
+        approvedAmount:
+          type: string
+          nullable: true
+        feeAmount:
+          type: string
+          nullable: true
+        payoutAmount:
+          type: string
+          nullable: true
+        payoutDate:
+          type: string
+          nullable: true
+        status:
+          type: string
+    Payroll:
+      type: object
+      required: [id, driver_id, company_id, payout_date, gross_salary_amount, status]
+      properties:
+        id:
+          type: string
+        driver_id:
+          type: string
+        company_id:
+          type: string
+        payout_date:
+          type: string
+        gross_salary_amount:
+          type: string
+          description: BigInt as string
+        advance_collection_amount:
+          type: string
+          description: BigInt as string
+        net_salary_amount:
+          type: string
+          nullable: true
+        status:
+          type: string
+paths:
+  /auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /onboarding/company:
+    post:
+      summary: Company onboarding
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: created
+        "400":
+          description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /drivers:
+    post:
+      summary: Create driver
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: created
+        "400":
+          description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /drivers/{id}/invite:
+    post:
+      summary: Invite driver
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: created
+        "404":
+          description: driver not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /driver-invitations/accept:
+    post:
+      summary: Accept driver invite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: created
+        "400":
+          description: invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /drivers/{id}/advances:
+    post:
+      summary: Request advance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advance"
+        "400":
+          description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /advances/{id}/approve:
+    post:
+      summary: Approve advance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advance"
+        "400":
+          description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /advances/{id}/reject:
+    post:
+      summary: Reject advance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advance"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /advances/{id}/payout-instruct:
+    post:
+      summary: Payout instruct
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advance"
+        "400":
+          description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /advances/{id}/mark-paid:
+    post:
+      summary: Mark advance paid
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advance"
+  /advances/{id}/write-off:
+    post:
+      summary: Write off advance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advance"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /payrolls/import:
+    post:
+      summary: Import payroll CSV
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: ok
+        "207":
+          description: partial
+        "400":
+          description: invalid header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /payrolls/{id}/collection-override:
+    post:
+      summary: Override collection amount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payroll"
+        "409":
+          description: already processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/batch/daily:
+    post:
+      summary: Run daily batch
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: ok
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /notifications/list:
+    post:
+      summary: List notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: ok
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

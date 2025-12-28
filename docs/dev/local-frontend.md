@@ -1,0 +1,90 @@
+# フロントエンド開発メモ
+
+## 前提
+
+- backend が起動済み（例: `http://localhost:3000`）
+- `docs/spec/openapi_min.yaml` が最新
+
+## セットアップ
+
+```bash
+cd frontend
+npm install
+cp .env.local.example .env.local
+```
+
+`frontend/.env.local` の `NEXT_PUBLIC_API_BASE_URL` を backend のURLに合わせる。
+
+## DB起動と初期データ（開発用ユーザー）
+
+```bash
+docker run --name driver-advance-accounting-postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_DB=driver_advance_accounting \
+  -p 5432:5432 \
+  -d postgres:15
+```
+
+```bash
+cd backend
+npm install
+npm run prisma:migrate:deploy
+npm run db:seed
+```
+
+開発用ログイン:
+
+- email: `admin@example.com`
+- password: `Passw0rd!`
+
+## /auth/login の確認（手動）
+
+```bash
+curl -s -X POST "http://localhost:3000/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Passw0rd!"}'
+```
+
+JWT が `token` として返れば OK。
+
+## db:reset（安全ガード付き）
+
+`npm run db:reset` は「DB全消し → migrate reset → seed」までを実行します。
+
+安全条件（満たさない場合は即終了）:
+
+- `DATABASE_URL` の host が `localhost` か `127.0.0.1`
+- DB名が `driver_advance_accounting` を含み、かつ `_test` または `_dev` を含む
+
+実行例:
+
+```bash
+cd backend
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/driver_advance_accounting_dev" \
+  npm run db:reset
+```
+
+## 型生成（OpenAPI）
+
+```bash
+cd frontend
+npm run generate:openapi
+```
+
+生成物: `frontend/src/lib/types/openapi.ts`
+
+## 起動
+
+```bash
+cd frontend
+npm run dev
+```
+
+ブラウザで `http://localhost:3001`（Next.jsのログに表示されるURL）を開く。
+
+## ログイン手順
+
+1. `/login` でメール/パスワードを入力
+2. 成功すると `/advances` へ遷移
+3. ドライバーIDと金額（string）を入力して前借り作成を試す

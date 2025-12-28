@@ -17,11 +17,15 @@
 - `docs/spec/revenue_billing.md`: 収益/請求
 - `docs/spec/features_screens.md`: 画面/機能概要（O/C/D）
 - `docs/spec/user_flows.md`: ユーザーストーリー
+- `docs/spec/auth_routing.md`: 認証/遷移ルール
 - `docs/spec/integrations_io.md`: 外部連携/入出力（CSV/メール/Stripe）
 - `docs/spec/data_model.md`: データモデル概要
 - `docs/spec/api_overview.md`: API 概要（参考）
 - `docs/spec/tests.md`: テスト方針
 - `docs/spec/open_issues.md`: 要検討事項
+- `docs/spec/notifications.md`: 通知仕様
+- `docs/spec/billing_operations.md`: 請求運用
+- `docs/spec/api_missing.md`: 未実装API設計
 
 ## 補助資料
 
@@ -32,3 +36,25 @@
 - `docs/diagrams/driver_advance_accounting_erd.md`
 - `docs/tests/batch_idempotency_test_cases.md`
 - `docs/assumptions/assumptions_backend_v1.md`
+- `docs/test-catalog.md`
+
+## 開発者メモ
+
+- `docs/dev/local-db-docker.md`
+- `docs/dev/local-server.md`
+- `docs/dev/local-frontend.md`
+- `docs/dev/testing.md`
+
+## テスト実行（Docker Postgres前提）
+
+1. テスト用DBを作成（例: `driver_advance_accounting_test`）
+2. `backend/.env.test` を用意して `DATABASE_URL` を設定
+3. 以下を実行
+
+```bash
+cd backend
+npm install
+npm run test:int
+```
+
+補足: テスト実行時に `prisma migrate deploy` を走らせ、各テストでテーブルをTRUNCATEします。
