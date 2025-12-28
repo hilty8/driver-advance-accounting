@@ -1,0 +1,10 @@
+{
+  "name": "driver-advance-accounting",
+  "private": true,
+  "scripts": {
+    "test:backend:unit": "npm --prefix backend run test:unit",
+    "test:backend:int": "npm --prefix backend run test:int",
+    "test:frontend": "npm --prefix frontend run generate:openapi && npm --prefix frontend run build",
+    "test:all": "npm run test:backend:unit && npm run test:backend:int && npm run test:frontend"
+  }
+}

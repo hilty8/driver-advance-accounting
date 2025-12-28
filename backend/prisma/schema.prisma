@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ledger_entries is the source of truth; balances/metrics are recalculable caches.
+
+enum EarningStatus {
+  confirmed
+  paid
+}
+
+enum AdvanceStatus {
+  requested
+  rejected
+  approved
+  payout_instructed
+  paid
+  settling
+  settled
+  written_off
+}
+
+enum PayrollStatus {
+  planned
+  processed
+}
+
+enum LedgerSourceType {
+  advance
+  payroll
+  manual_adjustment
+  write_off
+}
+
+enum LedgerEntryType {
+  advance_principal
+  fee
+  collection
+  write_off
+}
+
+enum UserRole {
+  admin
+  operator
+  company
+  driver
+}
+
+model companies {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  limit_rate Decimal  @db.Decimal(5, 4) @default(0.8)
+  fee_rate   Decimal  @db.Decimal(5, 4) @default(0.05)
+  payout_day Int? @db.SmallInt
+  payout_day_is_month_end Boolean @default(false)
+  payout_offset_months Int @default(2) @db.SmallInt
+  allow_advance_over_salary Boolean @default(false)
+  stripe_customer_id String?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  drivers   drivers[]
+  earnings  earnings[]
+  advances  advances[]
+  payrolls  payrolls[]
+  ledger_entries ledger_entries[]
+  metrics_monthly metrics_monthly[]
+  driver_balances_materialized driver_balances_materialized[]
+  users users[]
+  driver_invitations driver_invitations[]
+  billing_runs billing_runs[]
+}
+
+model drivers {
+  id         String   @id @default(uuid()) @db.Uuid
+  company_id String   @db.Uuid
+  external_id String? @unique
+  name       String
+  email      String?  @unique
+  memo       String?
+  bank_account Json?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  company companies @relation(fields: [company_id], references: [id])
+  earnings earnings[]
+  advances advances[]
+  payrolls payrolls[]
+  ledger_entries ledger_entries[]
+  driver_balances_materialized driver_balances_materialized?
+  users users[]
+  driver_invitations driver_invitations[]
+}
+
+model earnings {
+  id           String         @id @default(uuid()) @db.Uuid
+  driver_id    String         @db.Uuid
+  company_id   String         @db.Uuid
+  work_month   DateTime       @db.Date
+  payout_month DateTime       @db.Date
+  amount       BigInt         @db.BigInt
+  status       EarningStatus
+  created_at   DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime       @default(now()) @db.Timestamptz(6)
+
+  driver  drivers   @relation(fields: [driver_id], references: [id])
+  company companies @relation(fields: [company_id], references: [id])
+
+  @@index([driver_id])
+  @@index([company_id])
+  @@index([payout_month])
+}
+
+model advances {
+  id               String         @id @default(uuid()) @db.Uuid
+  driver_id        String         @db.Uuid
+  company_id       String         @db.Uuid
+  requested_amount BigInt         @db.BigInt
+  requested_at     DateTime       @db.Timestamptz(6)
+  approved_amount  BigInt?        @db.BigInt
+  fee_amount       BigInt?        @db.BigInt
+  payout_amount    BigInt?        @db.BigInt
+  payout_date      DateTime?      @db.Date
+  status           AdvanceStatus
+  memo             String?
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
+
+  driver  drivers   @relation(fields: [driver_id], references: [id])
+  company companies @relation(fields: [company_id], references: [id])
+
+  @@index([driver_id])
+  @@index([company_id])
+  @@index([status])
+}
+
+model payrolls {
+  id                        String        @id @default(uuid()) @db.Uuid
+  driver_id                 String        @db.Uuid
+  company_id                String        @db.Uuid
+  payout_date               DateTime      @db.Date
+  gross_salary_amount       BigInt        @db.BigInt
+  advance_collection_amount BigInt        @default(0) @db.BigInt
+  collection_override_amount BigInt?
+  collection_override_reason String?
+  net_salary_amount         BigInt?
+  status                    PayrollStatus
+  created_at                DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime      @default(now()) @db.Timestamptz(6)
+
+  driver  drivers   @relation(fields: [driver_id], references: [id])
+  company companies @relation(fields: [company_id], references: [id])
+
+  @@index([driver_id])
+  @@index([company_id])
+  @@index([payout_date, status])
+}
+
+model ledger_entries {
+  id          String            @id @default(uuid()) @db.Uuid
+  driver_id   String            @db.Uuid
+  company_id  String            @db.Uuid
+  source_type LedgerSourceType
+  source_id   String            @db.Uuid
+  entry_type  LedgerEntryType
+  amount      BigInt            @db.BigInt
+  occurred_on DateTime          @db.Date
+  created_at  DateTime          @default(now()) @db.Timestamptz(6)
+
+  driver  drivers   @relation(fields: [driver_id], references: [id])
+  company companies @relation(fields: [company_id], references: [id])
+
+  @@index([driver_id])
+  @@index([company_id])
+  @@index([entry_type])
+  @@index([occurred_on])
+}
+
+model driver_balances_materialized {
+  driver_id                 String   @id @db.Uuid
+  company_id                String?  @db.Uuid
+  advance_balance           BigInt   @default(0) @db.BigInt
+  unpaid_confirmed_earnings BigInt   @default(0) @db.BigInt
+  advance_limit             BigInt   @default(0) @db.BigInt
+  as_of_date                DateTime @db.Date
+  refreshed_at              DateTime @default(now()) @db.Timestamptz(6)
+
+  driver  drivers   @relation(fields: [driver_id], references: [id])
+  company companies? @relation(fields: [company_id], references: [id])
+
+  @@index([company_id])
+}
+
+model metrics_monthly {
+  id                          String   @id @default(uuid()) @db.Uuid
+  company_id                  String?  @db.Uuid
+  year_month                  DateTime @db.Date
+  total_advance_principal     BigInt   @default(0) @db.BigInt
+  total_fee_revenue           BigInt   @default(0) @db.BigInt
+  total_collected_principal   BigInt   @default(0) @db.BigInt
+  total_written_off_principal BigInt   @default(0) @db.BigInt
+  created_at                  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime @default(now()) @db.Timestamptz(6)
+
+  company companies? @relation(fields: [company_id], references: [id])
+
+  @@unique([company_id, year_month])
+  @@index([company_id])
+  @@index([year_month])
+}
+
+model users {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  password_hash String
+  role          UserRole
+  company_id    String?  @db.Uuid
+  driver_id     String?  @db.Uuid
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  company companies? @relation(fields: [company_id], references: [id])
+  driver  drivers?   @relation(fields: [driver_id], references: [id])
+
+  password_reset_tokens password_reset_tokens[]
+
+  @@index([company_id])
+  @@index([driver_id])
+}
+
+model driver_invitations {
+  id         String   @id @default(uuid()) @db.Uuid
+  company_id String   @db.Uuid
+  driver_id  String   @db.Uuid
+  email      String
+  token      String   @unique
+  expires_at DateTime @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  company companies @relation(fields: [company_id], references: [id])
+  driver  drivers   @relation(fields: [driver_id], references: [id])
+
+  @@index([company_id])
+  @@index([driver_id])
+  @@index([expires_at])
+}
+
+model password_reset_tokens {
+  id         String    @id @default(uuid()) @db.Uuid
+  user_id    String    @db.Uuid
+  token      String    @unique
+  expires_at DateTime  @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+
+  user users @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([expires_at])
+}
+
+model billing_runs {
+  id                      String   @id @default(uuid()) @db.Uuid
+  company_id              String   @db.Uuid
+  year_month              DateTime @db.Date
+  total_advance_principal BigInt   @db.BigInt
+  rate_scaled             BigInt   @db.BigInt
+  billing_fee             BigInt   @db.BigInt
+  stripe_invoice_id       String?
+  stripe_status           String   @default("pending")
+  created_at              DateTime @default(now()) @db.Timestamptz(6)
+
+  company companies @relation(fields: [company_id], references: [id])
+
+  @@index([company_id])
+  @@index([year_month])
+  @@unique([company_id, year_month])
+}
+
+model notifications {
+  id             String   @id @default(uuid()) @db.Uuid
+  recipient_type String
+  recipient_id   String?  @db.Uuid
+  category       String
+  severity       String
+  title          String
+  message        String
+  source_type    String?
+  source_id      String?  @db.Uuid
+  is_read        Boolean  @default(false)
+  read_at        DateTime?
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([recipient_type, recipient_id])
+  @@index([category])
+  @@index([created_at])
+}

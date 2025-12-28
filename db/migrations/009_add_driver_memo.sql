@@ -1,0 +1,2 @@
+ALTER TABLE drivers
+ADD COLUMN memo TEXT;
