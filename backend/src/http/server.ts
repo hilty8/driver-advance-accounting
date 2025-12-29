@@ -497,9 +497,21 @@ export const createServer = () => {
   const driverInviteAcceptHandler = createDriverInviteAcceptHandler();
   const companyOnboardingHandler = createCompanyOnboardingHandler();
   const compensationLoanHandler = createCompensationLoanHandler();
+  const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3001';
 
   return http.createServer(async (req, res) => {
     try {
+      res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+      if (req.method === 'OPTIONS') {
+        res.statusCode = 204;
+        res.end();
+        return;
+      }
+
       const authUser = parseAuthUser(req);
 
       const match = matchCompanySettings(req.method, req.url);

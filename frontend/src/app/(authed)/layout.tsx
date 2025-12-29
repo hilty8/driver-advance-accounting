@@ -1,8 +1,9 @@
 "use client";
 
 import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { clearSession, getSession, type StoredSession } from '@/lib/auth/session';
+import { isRoleAllowedForPath, resolveHomePath } from '@/lib/auth/routing';
 
 type AuthedLayoutProps = {
   children: ReactNode;
@@ -10,6 +11,7 @@ type AuthedLayoutProps = {
 
 export default function AuthedLayout({ children }: AuthedLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [session, setSession] = useState<StoredSession | null>(null);
 
   useEffect(() => {
@@ -37,6 +39,34 @@ export default function AuthedLayout({ children }: AuthedLayoutProps) {
         <div className="shell">
           <div className="card">
             <p className="muted">認証情報を確認しています...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isRoleAllowedForPath(session.user.role, pathname)) {
+    return (
+      <div className="page">
+        <div className="shell">
+          <div className="card stack">
+            <div>
+              <p className="tag">Access Denied</p>
+              <h1 className="title">アクセス権限がありません</h1>
+              <p className="subtitle">このページにはアクセスできません。</p>
+            </div>
+            <div className="row">
+              <button
+                className="button"
+                type="button"
+                onClick={() => router.replace(resolveHomePath(session.user.role))}
+              >
+                ホームへ戻る
+              </button>
+              <button className="button ghost" type="button" onClick={handleLogout}>
+                ログアウト
+              </button>
+            </div>
           </div>
         </div>
       </div>

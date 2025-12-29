@@ -30,13 +30,14 @@ docker run --name driver-advance-accounting-postgres \
 cd backend
 npm install
 npm run prisma:migrate:deploy
-npm run db:seed
+SEED_MODE=dev npm run db:seed
 ```
 
 開発用ログイン:
 
-- email: `admin@example.com`
-- password: `Passw0rd!`
+- admin: `admin@example.com` / `Passw0rd!`
+- company: `company@example.com` / `Passw0rd!`
+- driver: `driver@example.com` / `Passw0rd!`
 
 ## /auth/login の確認（手動）
 
@@ -73,6 +74,21 @@ npm run generate:openapi
 ```
 
 生成物: `frontend/src/lib/types/openapi.ts`
+
+## Backend 起動
+
+```bash
+cd backend
+npm run dev
+```
+
+`backend/.env` に以下のキーが必要:
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `CORS_ORIGIN` (開発用。例: `http://localhost:3001`)
+
+開発時は `CORS_ORIGIN` を指定し、フロント（3001）からのアクセスを許可する。
 
 ## 起動
 

@@ -38,7 +38,8 @@ npm run dev
 
 開発用ログイン（seed後）:
 
-- email: `admin@example.com`
-- password: `Passw0rd!`
+- admin: `admin@example.com` / `Passw0rd!`
+- company: `company@example.com` / `Passw0rd!`
+- driver: `driver@example.com` / `Passw0rd!`
 
 注意: これは開発専用アカウントです。

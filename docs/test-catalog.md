@@ -38,7 +38,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F00 | SF01 | 共通エラー | 失敗時に共通形式で返せる | `docs/spec/api_contract.md#エラー形式`, `docs/spec/api_contract.md#403404-の使い分け`, `docs/spec/api_contract.md#ownership-403-の基準` | - | `[F00][SF01]` `backend/tests/integration/smoke.spec.ts` | - | TBD | CI |
 | F01 | SF01 | ログイン | ユーザーがJWTを取得してアプリを使える | `docs/spec/openapi_min.yaml#/paths/~1auth~1login/post`, `docs/spec/api_contract.md#エラー形式` | - | `[F01][SF01]` `backend/tests/integration/auth.spec.ts` | `[F01][SF01]` `backend/tests/contracts/contract.spec.ts` | TBD | CI |
-| F01 | SF02 | ロール別ホーム | ロールに応じた初期導線を案内できる | `docs/spec/auth_routing.md#ロール別遷移ルール`, `docs/spec/auth_routing.md#未ログイン時のガード`, `docs/spec/auth_routing.md#権限不足時の扱い` | - | - | - | TBD | Design |
+| F01 | SF02 | ロール別ホーム | ロールに応じた初期導線を案内できる | `docs/spec/auth_routing.md#ロール別遷移ルール`, `docs/spec/auth_routing.md#未ログイン時のガード`, `docs/spec/auth_routing.md#権限不足時の扱い` | - | - | - | TBD | CI |
 | F02 | SF01 | 招待送信 | CがDを招待できる | `docs/spec/openapi_min.yaml#/paths/~1drivers~1{id}~1invite/post`, `docs/spec/features_screens.md#c-事業者` | - | `[F02][SF01]` `backend/tests/integration/driver_invite.spec.ts` | - | TBD | CI |
 | F02 | SF02 | 招待受諾 | Dが招待を受諾できる | `docs/spec/openapi_min.yaml#/paths/~1driver-invitations~1accept/post`, `docs/spec/features_screens.md#d-ドライバー` | - | `[F02][SF02]` `backend/tests/integration/driver_invite.spec.ts` | - | TBD | CI |
 | F02 | SF03 | 招待後ログイン | Dが招待後にログインできる | `docs/spec/openapi_min.yaml#/paths/~1auth~1login/post`, `docs/spec/user_flows.md#ユーザーストーリー大まかなフロー` | - | - | - | TBD | Design |
@@ -63,3 +63,4 @@
 
 - 2025-12-27: Status を単一値に正規化し、F00 を新設して共通エラーを移管
 - 2025-12-27: OpenAPI の Spec リンクを JSON Pointer へ精密化
+- 2025-12-28: F01-SF02 をロール別ホーム実装に合わせて CI に更新
