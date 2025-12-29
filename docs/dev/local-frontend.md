@@ -104,3 +104,19 @@ npm run dev
 1. `/login` でメール/パスワードを入力
 2. 成功すると `/advances` へ遷移
 3. ドライバーIDと金額（string）を入力して前借り作成を試す
+
+## 招待トークンの確認（暫定）
+
+招待メールは未実装のため、受諾に必要なトークンはDBから確認する。
+
+```bash
+docker exec -it driver-advance-accounting-postgres psql -U postgres -d driver_advance_accounting
+```
+
+```sql
+SELECT token, expires_at, email
+FROM driver_invitations
+WHERE used_at IS NULL
+ORDER BY created_at DESC
+LIMIT 5;
+```
