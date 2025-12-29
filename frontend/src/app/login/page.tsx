@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login } from '@/lib/api/auth';
 import { getSession, setSession } from '@/lib/auth/session';
+import { resolveHomePath } from '@/lib/auth/routing';
 import type { ApiErrorPayload } from '@/lib/api/client';
 
 export default function LoginPage() {
@@ -16,7 +17,7 @@ export default function LoginPage() {
   useEffect(() => {
     const existing = getSession();
     if (existing?.token) {
-      router.replace('/advances');
+      router.replace(resolveHomePath(existing.user.role));
     }
   }, [router]);
 
@@ -27,7 +28,7 @@ export default function LoginPage() {
     try {
       const response = await login(email, password);
       setSession({ token: response.token, user: response.user });
-      router.replace('/advances');
+      router.replace(resolveHomePath(response.user.role));
     } catch (err) {
       setError(err as ApiErrorPayload);
     } finally {
