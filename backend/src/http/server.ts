@@ -28,6 +28,7 @@ import {
   createAdvanceRejectHandler,
   createAdvanceRequestHandler,
   createCompanyAdvancesListHandler,
+  createDriverAdvancesListHandler,
   createDriverAdvanceAvailabilityHandler
 } from './advances';
 import { createCollectionOverrideHandler } from './payrolls';
@@ -139,6 +140,15 @@ const matchDriverInviteAccept = (method: string | undefined, url: string | undef
   const path = url.split('?')[0];
   if (path !== '/driver-invitations/accept') return null;
   return {};
+};
+
+const matchDriverAdvancesList = (method: string | undefined, url: string | undefined) => {
+  if (!method || !url) return null;
+  if (method !== 'GET') return null;
+  const path = url.split('?')[0];
+  const match = path.match(/^\/drivers\/([^/]+)\/advances$/);
+  if (!match) return null;
+  return { driverId: match[1] };
 };
 
 const matchAdvanceRequest = (method: string | undefined, url: string | undefined) => {
@@ -513,6 +523,7 @@ export const createServer = () => {
   const advancePayoutInstructHandler = createAdvancePayoutInstructHandler();
   const advanceMarkPaidHandler = createAdvanceMarkPaidHandler();
   const companyAdvancesListHandler = createCompanyAdvancesListHandler();
+  const driverAdvancesListHandler = createDriverAdvancesListHandler();
   const driverAdvanceAvailabilityHandler = createDriverAdvanceAvailabilityHandler();
   const collectionOverrideHandler = createCollectionOverrideHandler();
   const driverInviteHandler = createDriverInviteHandler(mailer);
@@ -638,6 +649,19 @@ export const createServer = () => {
       if (matchDriverInviteAccept(req.method, req.url)) {
         const body = await parseJsonBody(req);
         const result = await driverInviteAcceptHandler({ body });
+        return sendJson(res, result.status, result.body);
+      }
+
+      const driverAdvancesListMatch = matchDriverAdvancesList(req.method, req.url);
+      if (driverAdvancesListMatch) {
+        const authError = requireAuth(authUser, ['driver']);
+        if (authError) return sendJson(res, authError.status, authError.body);
+        const ownershipError = await requireDriverAccess(authUser, driverAdvancesListMatch.driverId);
+        if (ownershipError) return sendJson(res, ownershipError.status, ownershipError.body);
+        const result = await driverAdvancesListHandler({
+          driverId: driverAdvancesListMatch.driverId,
+          body: null
+        });
         return sendJson(res, result.status, result.body);
       }
 

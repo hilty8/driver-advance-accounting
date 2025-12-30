@@ -2,7 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { getSession } from '@/lib/auth/session';
-import { createAdvance, getAdvanceAvailability, type Advance } from '@/lib/api/advances';
+import {
+  createAdvance,
+  getAdvanceAvailability,
+  listDriverAdvances,
+  type Advance
+} from '@/lib/api/advances';
 import type { ApiErrorPayload } from '@/lib/api/client';
 
 const isValidAmount = (value: string) => /^\d+$/.test(value) && Number(value) > 0;
@@ -47,6 +52,9 @@ export default function DriverHome() {
   const [deductedAmount, setDeductedAmount] = useState('0');
   const [limitLoading, setLimitLoading] = useState(false);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [advanceList, setAdvanceList] = useState<Advance[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
 
   const apiErrorMessage = useMemo(
     () => mapAdvanceError(apiError, limitAmount),
@@ -70,6 +78,50 @@ export default function DriverHome() {
     };
     fetchAvailability();
   }, [driverId]);
+
+  useEffect(() => {
+    if (!driverId) return;
+    const fetchList = async () => {
+      setListLoading(true);
+      setListError(null);
+      try {
+        const list = await listDriverAdvances(driverId);
+        setAdvanceList(list);
+      } catch {
+        setListError('申請履歴を取得できませんでした。');
+      } finally {
+        setListLoading(false);
+      }
+    };
+    fetchList();
+  }, [driverId]);
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'requested':
+        return '申請中';
+      case 'approved':
+        return '承認';
+      case 'rejected':
+        return '否認';
+      case 'payout_instructed':
+        return '振込指示';
+      case 'paid':
+        return '支払済';
+      case 'write_off':
+      case 'written_off':
+        return '貸倒';
+      default:
+        return status;
+    }
+  };
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('ja-JP');
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -180,6 +232,64 @@ export default function DriverHome() {
               </a>
               <span className="muted">承認結果は後ほどご確認ください。</span>
             </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="card stack">
+        <div>
+          <h3>前借り申請履歴</h3>
+          <p className="muted">否認された申請には理由が表示されます。</p>
+        </div>
+
+        {listLoading ? <p className="muted">読み込み中...</p> : null}
+        {listError ? (
+          <div className="error">
+            <strong>履歴取得に失敗しました。</strong>
+            <div>{listError}</div>
+          </div>
+        ) : null}
+
+        {!listLoading && !listError && advanceList.length === 0 ? (
+          <p className="muted">表示できる申請履歴がありません。</p>
+        ) : null}
+
+        {!listLoading && !listError && advanceList.length > 0 ? (
+          <div className="card" style={{ background: '#fff' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '8px' }}>申請日</th>
+                  <th style={{ textAlign: 'right', padding: '8px' }}>金額</th>
+                  <th style={{ textAlign: 'left', padding: '8px' }}>ステータス</th>
+                  <th style={{ textAlign: 'left', padding: '8px' }}>否認理由</th>
+                </tr>
+              </thead>
+              <tbody>
+                {advanceList.map((advance) => (
+                  <tr key={advance.id}>
+                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                      {formatDateTime(advance.createdAt)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '8px',
+                        borderTop: '1px solid #eee',
+                        textAlign: 'right'
+                      }}
+                    >
+                      {formatYen(advance.requestedAmount)}円
+                    </td>
+                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                      {statusLabel(advance.status)}
+                    </td>
+                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                      {advance.status === 'rejected' ? advance.rejectReason ?? '-' : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : null}
       </div>

@@ -32,6 +32,7 @@ export const AdvanceSchema = z.object({
   companyId: z.string(),
   driverEmail: z.string().nullable().optional(),
   driverName: z.string().nullable().optional(),
+  rejectReason: z.string().nullable().optional(),
   requestedAmount: z.string(),
   status: z.string()
 }).passthrough();
