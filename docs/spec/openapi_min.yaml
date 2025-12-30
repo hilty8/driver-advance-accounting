@@ -57,6 +57,9 @@ components:
         driverName:
           type: string
           nullable: true
+        rejectReason:
+          type: string
+          nullable: true
         requestedAmount:
           type: string
           description: BigInt as string
@@ -308,6 +311,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /drivers/{id}/advances:
+    get:
+      summary: Driver advances list
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Advance"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       summary: Request advance
       security:

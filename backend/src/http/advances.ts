@@ -73,6 +73,14 @@ const mapAdvanceRow = (row: {
   updatedAt: row.updated_at
 });
 
+const mapAdvanceResponse = (
+  row: Parameters<typeof mapAdvanceRow>[0],
+  extras?: { rejectReason?: string | null }
+) => ({
+  ...mapAdvanceRow(row),
+  rejectReason: extras?.rejectReason ?? null
+});
+
 const parseDateTime = (value: string): Date | null => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
@@ -221,9 +229,42 @@ export const createCompanyAdvancesListHandler = () => {
     const rows = await prisma.advances.findMany({
       where: { company_id: input.companyId },
       orderBy: { created_at: 'desc' },
-    include: { driver: { select: { email: true, name: true } } }
+      include: { driver: { select: { email: true, name: true } } }
     });
-    const advances = rows.map(mapAdvanceRow);
+    const advances = rows.map((row) => mapAdvanceResponse(row));
+    return { status: 200, body: advances };
+  };
+};
+
+export const createDriverAdvancesListHandler = () => {
+  return async (input: HandlerInput): Promise<HandlerResponse> => {
+    if (!input.driverId) return { status: 400, body: jsonError('driverId is required') };
+    const rows = await prisma.advances.findMany({
+      where: { driver_id: input.driverId },
+      orderBy: { created_at: 'desc' }
+    });
+    if (rows.length === 0) return { status: 200, body: [] };
+
+    const advanceIds = rows.map((row) => row.id);
+    const logs = await prisma.advance_audit_logs.findMany({
+      where: {
+        advance_id: { in: advanceIds },
+        action: 'rejected'
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    const rejectReasonByAdvance = new Map<string, string>();
+    for (const log of logs) {
+      if (!rejectReasonByAdvance.has(log.advance_id) && log.reason) {
+        rejectReasonByAdvance.set(log.advance_id, log.reason);
+      }
+    }
+
+    const advances = rows.map((row) => {
+      const rejectReason =
+        row.status === 'rejected' ? rejectReasonByAdvance.get(row.id) ?? null : null;
+      return mapAdvanceResponse(row, { rejectReason });
+    });
     return { status: 200, body: advances };
   };
 };

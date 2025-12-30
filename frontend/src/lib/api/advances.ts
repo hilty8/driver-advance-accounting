@@ -23,6 +23,11 @@ export const getAdvanceAvailability = (driverId: string) =>
     method: 'GET'
   });
 
+export const listDriverAdvances = (driverId: string) =>
+  apiFetch<Advance[]>(`/drivers/${driverId}/advances`, {
+    method: 'GET'
+  });
+
 export const approveAdvance = (advanceId: string, approvedAt: string) =>
   apiFetch<Advance>(`/advances/${advanceId}/approve`, {
     method: 'POST',
