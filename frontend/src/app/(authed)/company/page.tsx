@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { getSession } from '@/lib/auth/session';
 import { createDriver, inviteDriver } from '@/lib/api/drivers';
+import { listCompanyAdvances, type Advance } from '@/lib/api/advances';
 import type { ApiErrorPayload } from '@/lib/api/client';
 
 export default function CompanyHome() {
@@ -14,6 +15,33 @@ export default function CompanyHome() {
   const [result, setResult] = useState<{ email: string; expiresAt: string } | null>(null);
   const [error, setError] = useState<ApiErrorPayload | null>(null);
   const [loading, setLoading] = useState(false);
+  const [advanceList, setAdvanceList] = useState<Advance[]>([]);
+  const [listError, setListError] = useState<ApiErrorPayload | null>(null);
+  const [listLoading, setListLoading] = useState(false);
+
+  const formatYen = (value: string) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? `${numeric.toLocaleString('ja-JP')}円` : `${value}円`;
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'requested':
+        return '申請中';
+      case 'approved':
+        return '承認';
+      case 'rejected':
+        return '否認';
+      case 'payout_instructed':
+        return '振込指示';
+      case 'paid':
+        return '支払済';
+      case 'write_off':
+        return '貸倒';
+      default:
+        return status;
+    }
+  };
 
   const expiresAtLabel = useMemo(() => {
     if (!result?.expiresAt) return '';
@@ -41,6 +69,23 @@ export default function CompanyHome() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!companyId) return;
+    const fetchList = async () => {
+      setListLoading(true);
+      setListError(null);
+      try {
+        const list = await listCompanyAdvances(companyId);
+        setAdvanceList(list);
+      } catch (err) {
+        setListError(err as ApiErrorPayload);
+      } finally {
+        setListLoading(false);
+      }
+    };
+    fetchList();
+  }, [companyId]);
 
   return (
     <div className="stack">
@@ -121,6 +166,71 @@ export default function CompanyHome() {
               <span className="chip">招待先: {result.email}</span>
               <span className="chip">有効期限: {expiresAtLabel || '-'}</span>
             </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="card stack">
+        <div>
+          <h3>前借り申請一覧</h3>
+          <p className="muted">最新の申請から表示します。</p>
+        </div>
+
+        {listLoading ? <p className="muted">読み込み中...</p> : null}
+        {listError ? (
+          <div className="error">
+            <strong>一覧取得に失敗しました。</strong>
+            <div>{listError.error}</div>
+          </div>
+        ) : null}
+
+        {!listLoading && !listError && advanceList.length === 0 ? (
+          <p className="muted">現在表示できる申請はありません。</p>
+        ) : null}
+
+        {!listLoading && !listError && advanceList.length > 0 ? (
+          <div className="card" style={{ background: '#fff' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '8px' }}>ドライバー</th>
+                  <th style={{ textAlign: 'right', padding: '8px' }}>金額</th>
+                  <th style={{ textAlign: 'left', padding: '8px' }}>ステータス</th>
+                  <th style={{ textAlign: 'left', padding: '8px' }}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {advanceList.map((advance) => (
+                  <tr key={advance.id}>
+                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                      {advance.driverName ?? advance.driverEmail ?? advance.driverId}
+                    </td>
+                    <td
+                      style={{
+                        padding: '8px',
+                        borderTop: '1px solid #eee',
+                        textAlign: 'right'
+                      }}
+                    >
+                      {formatYen(advance.requestedAmount)}
+                    </td>
+                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                      {statusLabel(advance.status)}
+                    </td>
+                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                      <div className="row">
+                        <button className="button" type="button" disabled>
+                          承認（後で実装）
+                        </button>
+                        <button className="button danger" type="button" disabled>
+                          否認（後で実装）
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : null}
       </div>

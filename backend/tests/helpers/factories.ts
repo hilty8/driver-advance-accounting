@@ -15,11 +15,15 @@ export const createCompany = async (name = 'Test Company') => {
   });
 };
 
-export const createDriver = async (companyId: string, email = 'driver@example.com') => {
+export const createDriver = async (
+  companyId: string,
+  email = 'driver@example.com',
+  name = 'Test Driver'
+) => {
   return prisma.drivers.create({
     data: {
       company_id: companyId,
-      name: 'Test Driver',
+      name,
       email,
       is_active: true
     }

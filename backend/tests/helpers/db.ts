@@ -6,16 +6,27 @@ const isTestDatabase = (databaseUrl?: string) => {
   return databaseUrl.includes('_test');
 };
 
+const getDatabaseName = (databaseUrl?: string) => {
+  if (!databaseUrl) return 'unknown';
+  try {
+    return new URL(databaseUrl).pathname.replace('/', '') || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+};
+
 export const migrateTestDb = () => {
   if (!isTestDatabase(process.env.DATABASE_URL)) {
-    throw new Error('DATABASE_URL must point to a test database (suffix "_test")');
+    const dbName = getDatabaseName(process.env.DATABASE_URL);
+    throw new Error(`DATABASE_URL must point to a test database (suffix "_test"), got "${dbName}"`);
   }
   execSync('npx prisma migrate deploy', { stdio: 'inherit', env: process.env });
 };
 
 export const resetTestDb = async () => {
   if (!isTestDatabase(process.env.DATABASE_URL)) {
-    throw new Error('DATABASE_URL must point to a test database (suffix "_test")');
+    const dbName = getDatabaseName(process.env.DATABASE_URL);
+    throw new Error(`DATABASE_URL must point to a test database (suffix "_test"), got "${dbName}"`);
   }
 
   const tables = await prisma.$queryRaw<

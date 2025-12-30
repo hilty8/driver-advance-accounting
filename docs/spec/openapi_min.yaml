@@ -51,9 +51,18 @@ components:
           type: string
         companyId:
           type: string
+        driverEmail:
+          type: string
+          nullable: true
+        driverName:
+          type: string
+          nullable: true
         requestedAmount:
           type: string
           description: BigInt as string
+        requestedAt:
+          type: string
+          nullable: true
         approvedAmount:
           type: string
           nullable: true
@@ -68,6 +77,12 @@ components:
           nullable: true
         status:
           type: string
+        createdAt:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          nullable: true
     Payroll:
       type: object
       required: [id, driver_id, company_id, payout_date, gross_salary_amount, status]
@@ -140,6 +155,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /companies/{id}/advances:
+    get:
+      summary: List company advances
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Advance"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /drivers/{id}/advance-availability:
+    get:
+      summary: Driver advance availability
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [availableAmount, deductedAmount]
+                properties:
+                  availableAmount:
+                    type: string
+                    description: BigInt as string
+                  deductedAmount:
+                    type: string
+                    description: BigInt as string
         "401":
           description: unauthorized
           content:

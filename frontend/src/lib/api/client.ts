@@ -6,7 +6,10 @@ export type ApiErrorPayload = {
   details?: unknown;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3000').replace(
+  /\/+$/,
+  ''
+);
 
 const parseBody = async (response: Response): Promise<unknown> => {
   const text = await response.text();
