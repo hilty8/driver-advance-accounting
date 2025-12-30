@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { ledger_entries as PrismaLedger } from '@prisma/client';
 import { LedgerEntry, UUID, Yen } from '../../domain/types';
 import { LedgerRepository } from '../interfaces';
@@ -17,8 +18,14 @@ const mapLedger = (row: PrismaLedger): LedgerEntry => ({
 });
 
 export class PrismaLedgerRepository implements LedgerRepository {
+  private readonly client: PrismaClient | Prisma.TransactionClient;
+
+  constructor(client: PrismaClient | Prisma.TransactionClient = prisma) {
+    this.client = client;
+  }
+
   async insert(entry: Omit<LedgerEntry, 'id' | 'createdAt'>): Promise<LedgerEntry> {
-    const row = await prisma.ledger_entries.create({
+    const row = await this.client.ledger_entries.create({
       data: {
         driver_id: entry.driverId,
         company_id: entry.companyId,
@@ -33,7 +40,7 @@ export class PrismaLedgerRepository implements LedgerRepository {
   }
 
   async sumAdvanceBalance(driverId: UUID, companyId: UUID, asOf: Date): Promise<Yen> {
-    const grouped = await prisma.ledger_entries.groupBy({
+    const grouped = (await (prisma.ledger_entries as any).groupBy({
       by: ['entry_type'],
       where: {
         driver_id: driverId,
@@ -41,10 +48,10 @@ export class PrismaLedgerRepository implements LedgerRepository {
         occurred_on: { lte: asOf }
       },
       _sum: { amount: true }
-    });
+    })) as Array<{ entry_type: string; _sum: { amount: bigint | null } }>;
     return computeAdvanceBalanceFromGrouped(
       grouped.map((row) => ({
-        entry_type: row.entry_type,
+        entry_type: row.entry_type as 'advance_principal' | 'collection' | 'write_off' | 'fee',
         _sum: { amount: row._sum.amount ? BigInt(row._sum.amount) : 0n }
       }))
     );

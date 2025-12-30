@@ -1,10 +1,7 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  testMatch: [
-    '<rootDir>/tests/integration/**/*.spec.ts',
-    '<rootDir>/tests/contracts/**/*.spec.ts'
-  ],
+  testMatch: ['<rootDir>/tests/scenario/**/*.spec.ts'],
   testEnvironment: 'node',
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json' }]

@@ -1,9 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { getSession } from '@/lib/auth/session';
 import { createDriver, inviteDriver } from '@/lib/api/drivers';
-import { listCompanyAdvances, type Advance } from '@/lib/api/advances';
+import { approveAdvance, listCompanyAdvances, rejectAdvance, type Advance } from '@/lib/api/advances';
 import type { ApiErrorPayload } from '@/lib/api/client';
 
 export default function CompanyHome() {
@@ -18,6 +18,12 @@ export default function CompanyHome() {
   const [advanceList, setAdvanceList] = useState<Advance[]>([]);
   const [listError, setListError] = useState<ApiErrorPayload | null>(null);
   const [listLoading, setListLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actioningId, setActioningId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{ type: 'approve' | 'reject'; advance: Advance } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [dialogError, setDialogError] = useState<string | null>(null);
 
   const formatYen = (value: string) => {
     const numeric = Number(value);
@@ -37,10 +43,18 @@ export default function CompanyHome() {
       case 'paid':
         return '支払済';
       case 'write_off':
+      case 'written_off':
         return '貸倒';
       default:
         return status;
     }
+  };
+
+  const formatActionError = (err: ApiErrorPayload) => {
+    if (err.status === 409) return '申請はすでに処理済みです。一覧を更新してください。';
+    if (err.status === 403) return '権限がありません。';
+    if (err.status === 400) return '入力内容に不備があります。';
+    return '処理に失敗しました。時間をおいて再度お試しください。';
   };
 
   const expiresAtLabel = useMemo(() => {
@@ -70,22 +84,82 @@ export default function CompanyHome() {
     }
   };
 
-  useEffect(() => {
+  const fetchList = useCallback(async () => {
     if (!companyId) return;
-    const fetchList = async () => {
-      setListLoading(true);
-      setListError(null);
-      try {
-        const list = await listCompanyAdvances(companyId);
-        setAdvanceList(list);
-      } catch (err) {
-        setListError(err as ApiErrorPayload);
-      } finally {
-        setListLoading(false);
-      }
-    };
-    fetchList();
+    setListLoading(true);
+    setListError(null);
+    try {
+      const list = await listCompanyAdvances(companyId);
+      setAdvanceList(list);
+    } catch (err) {
+      setListError(err as ApiErrorPayload);
+    } finally {
+      setListLoading(false);
+    }
   }, [companyId]);
+
+  useEffect(() => {
+    fetchList();
+  }, [fetchList]);
+
+  const openApproveDialog = (advance: Advance) => {
+    setDialog({ type: 'approve', advance });
+    setDialogError(null);
+    setActionError(null);
+    setActionMessage(null);
+  };
+
+  const openRejectDialog = (advance: Advance) => {
+    setDialog({ type: 'reject', advance });
+    setRejectReason('');
+    setDialogError(null);
+    setActionError(null);
+    setActionMessage(null);
+  };
+
+  const handleApprove = async () => {
+    if (!dialog || dialog.type !== 'approve') return;
+    setActioningId(dialog.advance.id);
+    setDialogError(null);
+    try {
+      await approveAdvance(dialog.advance.id, new Date().toISOString());
+      setActionMessage('承認しました。');
+      await fetchList();
+      setDialog(null);
+    } catch (err) {
+      setActionError(formatActionError(err as ApiErrorPayload));
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!dialog || dialog.type !== 'reject') return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      setDialogError('否認理由を入力してください。');
+      return;
+    }
+    if (reason.length > 500) {
+      setDialogError('否認理由は500文字以内で入力してください。');
+      return;
+    }
+    setActioningId(dialog.advance.id);
+    setDialogError(null);
+    try {
+      await rejectAdvance(dialog.advance.id, reason);
+      setActionMessage('否認しました。');
+      await fetchList();
+      setDialog(null);
+    } catch (err) {
+      setActionError(formatActionError(err as ApiErrorPayload));
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const isRejectDisabled =
+    rejectReason.trim().length === 0 || rejectReason.trim().length > 500;
 
   return (
     <div className="stack">
@@ -183,6 +257,17 @@ export default function CompanyHome() {
             <div>{listError.error}</div>
           </div>
         ) : null}
+        {actionError ? (
+          <div className="error">
+            <strong>操作に失敗しました。</strong>
+            <div>{actionError}</div>
+          </div>
+        ) : null}
+        {actionMessage ? (
+          <div className="card" style={{ background: '#fff' }}>
+            <strong>{actionMessage}</strong>
+          </div>
+        ) : null}
 
         {!listLoading && !listError && advanceList.length === 0 ? (
           <p className="muted">現在表示できる申請はありません。</p>
@@ -200,40 +285,122 @@ export default function CompanyHome() {
                 </tr>
               </thead>
               <tbody>
-                {advanceList.map((advance) => (
-                  <tr key={advance.id}>
-                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
-                      {advance.driverName ?? advance.driverEmail ?? advance.driverId}
-                    </td>
-                    <td
-                      style={{
-                        padding: '8px',
-                        borderTop: '1px solid #eee',
-                        textAlign: 'right'
-                      }}
-                    >
-                      {formatYen(advance.requestedAmount)}
-                    </td>
-                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
-                      {statusLabel(advance.status)}
-                    </td>
-                    <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
-                      <div className="row">
-                        <button className="button" type="button" disabled>
-                          承認（後で実装）
-                        </button>
-                        <button className="button danger" type="button" disabled>
-                          否認（後で実装）
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {advanceList.map((advance) => {
+                  const isRequested = advance.status === 'requested';
+                  return (
+                    <tr key={advance.id}>
+                      <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                        {advance.driverName ?? advance.driverEmail ?? advance.driverId}
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px',
+                          borderTop: '1px solid #eee',
+                          textAlign: 'right'
+                        }}
+                      >
+                        {formatYen(advance.requestedAmount)}
+                      </td>
+                      <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                        {statusLabel(advance.status)}
+                      </td>
+                      <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
+                        <div className="row">
+                          <button
+                            className="button success"
+                            type="button"
+                            disabled={!isRequested || actioningId === advance.id}
+                            onClick={() => openApproveDialog(advance)}
+                          >
+                            承認
+                          </button>
+                          <button
+                            className="button danger"
+                            type="button"
+                            disabled={!isRequested || actioningId === advance.id}
+                            onClick={() => openRejectDialog(advance)}
+                          >
+                            否認
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : null}
       </div>
+
+      {dialog ? (
+        <div className="modal">
+          <div className="modal-card">
+            {dialog.type === 'approve' ? (
+              <div className="stack">
+                <h4>前借り申請を承認しますか？</h4>
+                <p className="muted">承認するとステータスが「承認」に更新されます。</p>
+                {dialogError ? <div className="error">{dialogError}</div> : null}
+                <div className="row">
+                  <button
+                    className="button success"
+                    type="button"
+                    onClick={handleApprove}
+                    disabled={actioningId === dialog.advance.id}
+                  >
+                    承認する
+                  </button>
+                  <button
+                    className="button ghost"
+                    type="button"
+                    onClick={() => setDialog(null)}
+                    disabled={actioningId === dialog.advance.id}
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="stack">
+                <h4>前借り申請を否認しますか？</h4>
+                <p className="muted">否認理由の入力が必須です（最大500文字）。</p>
+                <textarea
+                  className="input"
+                  rows={4}
+                  value={rejectReason}
+                  onChange={(event) => {
+                    setRejectReason(event.target.value);
+                    setDialogError(null);
+                  }}
+                  placeholder="否認理由を入力してください"
+                />
+                <div className="muted">
+                  入力した否認理由は、今後アプリ内でドライバーに表示される予定です。
+                </div>
+                {dialogError ? <div className="error">{dialogError}</div> : null}
+                <div className="row">
+                  <button
+                    className="button danger"
+                    type="button"
+                    onClick={handleReject}
+                    disabled={isRejectDisabled || actioningId === dialog.advance.id}
+                  >
+                    否認する
+                  </button>
+                  <button
+                    className="button ghost"
+                    type="button"
+                    onClick={() => setDialog(null)}
+                    disabled={actioningId === dialog.advance.id}
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

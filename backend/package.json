@@ -7,6 +7,7 @@
     "dev": "ts-node src/main.ts",
     "build": "tsc -p tsconfig.json",
     "test:int": "jest -c jest.int.config.ts --runInBand",
+    "test:scenario": "jest -c jest.scenario.config.ts --runInBand",
     "test:unit": "jest -c jest.unit.config.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

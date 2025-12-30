@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { advances as PrismaAdvance } from '@prisma/client';
 import { Advance, UUID } from '../../domain/types';
 import { AdvanceRepository } from '../interfaces';
@@ -20,14 +21,20 @@ const mapAdvance = (row: PrismaAdvance): Advance => ({
 });
 
 export class PrismaAdvanceRepository implements AdvanceRepository {
+  private readonly client: PrismaClient | Prisma.TransactionClient;
+
+  constructor(client: PrismaClient | Prisma.TransactionClient = prisma) {
+    this.client = client;
+  }
+
   async findById(id: UUID): Promise<Advance | null> {
-    const row = await prisma.advances.findUnique({ where: { id } });
+    const row = await this.client.advances.findUnique({ where: { id } });
     return row ? mapAdvance(row) : null;
   }
 
   async save(advance: Advance): Promise<Advance> {
     // TODO: expand to update nested relations; for now upsert by id.
-    const row = await prisma.advances.upsert({
+    const row = await this.client.advances.upsert({
       where: { id: advance.id },
       update: {
         driver_id: advance.driverId,
@@ -60,7 +67,7 @@ export class PrismaAdvanceRepository implements AdvanceRepository {
   }
 
   async listPendingForCompany(companyId: UUID): Promise<Advance[]> {
-    const rows = await prisma.advances.findMany({
+    const rows = await this.client.advances.findMany({
       where: { company_id: companyId, status: 'requested' }
     });
     return rows.map(mapAdvance);

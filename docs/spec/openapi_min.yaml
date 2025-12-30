@@ -354,6 +354,16 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvedAt]
+              properties:
+                approvedAt:
+                  type: string
       responses:
         "200":
           description: ok
@@ -363,6 +373,24 @@ paths:
                 $ref: "#/components/schemas/Advance"
         "400":
           description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: invalid status
           content:
             application/json:
               schema:
@@ -384,6 +412,18 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
       responses:
         "200":
           description: ok
@@ -391,8 +431,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Advance"
+        "400":
+          description: invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: invalid status
           content:
             application/json:
               schema:
