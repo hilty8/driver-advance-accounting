@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../repositories/prisma/client';
 import { PrismaAdvanceRepository } from '../repositories/prisma/advanceRepository';
 import { PrismaLedgerRepository } from '../repositories/prisma/ledgerRepository';
@@ -8,24 +9,41 @@ import { newUuid } from './ids';
 import { calculateAdvanceLimit, calculateFee } from '../batch/batchMath';
 import { computeAvailableAdvance, decimalToRateScaled, RATE_SCALE } from './advanceAvailability';
 
+export class AdvanceStatusError extends Error {
+  readonly status: string;
+
+  constructor(advanceId: UUID, status: string) {
+    super(`advance ${advanceId} is not in requested status`);
+    this.name = 'AdvanceStatusError';
+    this.status = status;
+  }
+}
+
 const ensureRequested = (advance: Advance): void => {
   if (advance.status !== 'requested') {
-    throw new Error(`advance ${advance.id} is not in requested status`);
+    throw new AdvanceStatusError(advance.id, advance.status);
   }
 };
 
 export class AdvanceServiceImpl implements AdvanceService {
-  private readonly advanceRepo = new PrismaAdvanceRepository();
-  private readonly ledgerRepo = new PrismaLedgerRepository();
+  private readonly client: PrismaClient | Prisma.TransactionClient;
+  private readonly advanceRepo: PrismaAdvanceRepository;
+  private readonly ledgerRepo: PrismaLedgerRepository;
+
+  constructor(client: PrismaClient | Prisma.TransactionClient = prisma) {
+    this.client = client;
+    this.advanceRepo = new PrismaAdvanceRepository(client);
+    this.ledgerRepo = new PrismaLedgerRepository(client);
+  }
 
   async calculateAdvanceLimit(driverId: UUID, asOf: Date): Promise<Yen> {
-    const driver = await prisma.drivers.findUnique({ where: { id: driverId } });
+    const driver = await this.client.drivers.findUnique({ where: { id: driverId } });
     if (!driver) throw new Error(`driver not found: ${driverId}`);
 
-    const company = await prisma.companies.findUnique({ where: { id: driver.company_id } });
+    const company = await this.client.companies.findUnique({ where: { id: driver.company_id } });
     if (!company) throw new Error(`company not found: ${driver.company_id}`);
 
-    const unpaid = await prisma.earnings.aggregate({
+    const unpaid = await this.client.earnings.aggregate({
       where: {
         driver_id: driverId,
         company_id: driver.company_id,
@@ -37,7 +55,7 @@ export class AdvanceServiceImpl implements AdvanceService {
     const unpaidConfirmed = BigInt(unpaid._sum.amount ?? 0);
 
     const currentMonth = monthStart(asOf);
-    const currentMonthConfirmed = await prisma.earnings.aggregate({
+    const currentMonthConfirmed = await this.client.earnings.aggregate({
       where: {
         driver_id: driverId,
         company_id: driver.company_id,
@@ -65,7 +83,7 @@ export class AdvanceServiceImpl implements AdvanceService {
     if (amount <= 0n) throw new Error('requested amount must be positive');
     if (amount > limit) throw new Error('requested amount exceeds advance limit');
 
-    const driver = await prisma.drivers.findUnique({ where: { id: driverId } });
+    const driver = await this.client.drivers.findUnique({ where: { id: driverId } });
     if (!driver) throw new Error(`driver not found: ${driverId}`);
 
     const advance: Advance = {
@@ -87,7 +105,7 @@ export class AdvanceServiceImpl implements AdvanceService {
     if (!advance) throw new Error(`advance not found: ${advanceId}`);
     ensureRequested(advance);
 
-    const company = await prisma.companies.findUnique({ where: { id: advance.companyId } });
+    const company = await this.client.companies.findUnique({ where: { id: advance.companyId } });
     if (!company) throw new Error(`company not found: ${advance.companyId}`);
 
     const feeRateScaled = decimalToRateScaled(company.fee_rate);

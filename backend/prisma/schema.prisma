@@ -25,6 +25,11 @@ enum AdvanceStatus {
   written_off
 }
 
+enum AdvanceAuditAction {
+  approved
+  rejected
+}
+
 enum PayrollStatus {
   planned
   processed
@@ -75,6 +80,7 @@ model companies {
   users users[]
   driver_invitations driver_invitations[]
   billing_runs billing_runs[]
+  advance_audit_logs advance_audit_logs[]
 }
 
 model drivers {
@@ -97,6 +103,7 @@ model drivers {
   driver_balances_materialized driver_balances_materialized?
   users users[]
   driver_invitations driver_invitations[]
+  advance_audit_logs advance_audit_logs[]
 }
 
 model earnings {
@@ -135,10 +142,33 @@ model advances {
 
   driver  drivers   @relation(fields: [driver_id], references: [id])
   company companies @relation(fields: [company_id], references: [id])
+  audit_logs advance_audit_logs[]
 
   @@index([driver_id])
   @@index([company_id])
   @@index([status])
+}
+
+model advance_audit_logs {
+  id            String             @id @default(uuid()) @db.Uuid
+  advance_id    String             @db.Uuid
+  company_id    String             @db.Uuid
+  driver_id     String             @db.Uuid
+  actor_user_id String             @db.Uuid
+  action        AdvanceAuditAction
+  reason        String?
+  created_at    DateTime           @default(now()) @db.Timestamptz(6)
+
+  advance advances @relation(fields: [advance_id], references: [id])
+  company companies @relation(fields: [company_id], references: [id])
+  driver  drivers   @relation(fields: [driver_id], references: [id])
+  actor   users     @relation(fields: [actor_user_id], references: [id])
+
+  @@index([advance_id])
+  @@index([company_id])
+  @@index([driver_id])
+  @@index([actor_user_id])
+  @@index([action])
 }
 
 model payrolls {
@@ -231,6 +261,7 @@ model users {
   driver  drivers?   @relation(fields: [driver_id], references: [id])
 
   password_reset_tokens password_reset_tokens[]
+  advance_audit_logs advance_audit_logs[]
 
   @@index([company_id])
   @@index([driver_id])

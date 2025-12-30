@@ -659,7 +659,11 @@ export const createServer = () => {
         const ownershipError = await requireAdvanceAccess(authUser, advanceApproveMatch.advanceId);
         if (ownershipError) return sendJson(res, ownershipError.status, ownershipError.body);
         const body = await parseJsonBody(req);
-        const result = await advanceApproveHandler({ advanceId: advanceApproveMatch.advanceId, body });
+        const result = await advanceApproveHandler({
+          advanceId: advanceApproveMatch.advanceId,
+          body,
+          actorUserId: authUser?.id
+        });
         return sendJson(res, result.status, result.body);
       }
 
@@ -670,7 +674,11 @@ export const createServer = () => {
         const ownershipError = await requireAdvanceAccess(authUser, advanceRejectMatch.advanceId);
         if (ownershipError) return sendJson(res, ownershipError.status, ownershipError.body);
         const body = await parseJsonBody(req);
-        const result = await advanceRejectHandler({ advanceId: advanceRejectMatch.advanceId, body });
+        const result = await advanceRejectHandler({
+          advanceId: advanceRejectMatch.advanceId,
+          body,
+          actorUserId: authUser?.id
+        });
         return sendJson(res, result.status, result.body);
       }
 

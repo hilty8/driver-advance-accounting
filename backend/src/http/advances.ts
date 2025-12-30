@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AdvanceServiceImpl } from '../domain/advanceServiceImpl';
+import { AdvanceServiceImpl, AdvanceStatusError } from '../domain/advanceServiceImpl';
 import { parsePositiveBigInt } from './csv';
 import { jsonError } from './errors';
 import { prisma } from '../repositories/prisma/client';
@@ -16,7 +16,7 @@ const ApproveSchema = z.object({
 });
 
 const RejectSchema = z.object({
-  reason: z.string().optional()
+  reason: z.string().trim().min(1).max(500)
 });
 
 const PayoutInstructSchema = z.object({
@@ -31,6 +31,7 @@ type HandlerInput = {
   driverId?: string;
   advanceId?: string;
   companyId?: string;
+  actorUserId?: string;
   body: unknown;
 };
 
@@ -99,9 +100,11 @@ export const createAdvanceRequestHandler = () => {
 };
 
 export const createAdvanceApproveHandler = () => {
-  const service = new AdvanceServiceImpl();
   return async (input: HandlerInput): Promise<HandlerResponse> => {
     if (!input.advanceId) return { status: 400, body: jsonError('advanceId is required') };
+    if (!input.actorUserId) return { status: 400, body: jsonError('actorUserId is required') };
+    const advanceId = input.advanceId;
+    const actorUserId = input.actorUserId;
     const parsed = ApproveSchema.safeParse(input.body);
     if (!parsed.success) {
       return { status: 400, body: jsonError('invalid payload', parsed.error.flatten()) };
@@ -110,27 +113,63 @@ export const createAdvanceApproveHandler = () => {
     if (!approvedAt) return { status: 400, body: jsonError('approvedAt is invalid') };
 
     try {
-      const advance = await service.approveAdvance(input.advanceId, approvedAt);
+      const advance = await prisma.$transaction(async (tx) => {
+        const service = new AdvanceServiceImpl(tx);
+        const updated = await service.approveAdvance(advanceId, approvedAt);
+        await tx.advance_audit_logs.create({
+          data: {
+            advance_id: updated.id,
+            company_id: updated.companyId,
+            driver_id: updated.driverId,
+            actor_user_id: actorUserId,
+            action: 'approved'
+          }
+        });
+        return updated;
+      });
       return { status: 200, body: advance };
     } catch (error) {
+      if (error instanceof AdvanceStatusError) {
+        return { status: 409, body: jsonError('advance is not in requested status') };
+      }
       return { status: 400, body: jsonError((error as Error).message) };
     }
   };
 };
 
 export const createAdvanceRejectHandler = () => {
-  const service = new AdvanceServiceImpl();
   return async (input: HandlerInput): Promise<HandlerResponse> => {
     if (!input.advanceId) return { status: 400, body: jsonError('advanceId is required') };
+    if (!input.actorUserId) return { status: 400, body: jsonError('actorUserId is required') };
+    const advanceId = input.advanceId;
+    const actorUserId = input.actorUserId;
     const parsed = RejectSchema.safeParse(input.body);
     if (!parsed.success) {
       return { status: 400, body: jsonError('invalid payload', parsed.error.flatten()) };
     }
 
     try {
-      const advance = await service.rejectAdvance(input.advanceId, parsed.data.reason);
+      const reason = parsed.data.reason.trim();
+      const advance = await prisma.$transaction(async (tx) => {
+        const service = new AdvanceServiceImpl(tx);
+        const updated = await service.rejectAdvance(advanceId, reason);
+        await tx.advance_audit_logs.create({
+          data: {
+            advance_id: updated.id,
+            company_id: updated.companyId,
+            driver_id: updated.driverId,
+            actor_user_id: actorUserId,
+            action: 'rejected',
+            reason
+          }
+        });
+        return updated;
+      });
       return { status: 200, body: advance };
     } catch (error) {
+      if (error instanceof AdvanceStatusError) {
+        return { status: 409, body: jsonError('advance is not in requested status') };
+      }
       return { status: 400, body: jsonError((error as Error).message) };
     }
   };

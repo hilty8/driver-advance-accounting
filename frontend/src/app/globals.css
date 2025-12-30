@@ -125,8 +125,35 @@ a {
   background: var(--accent-deep);
 }
 
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.button:disabled:hover {
+  transform: none;
+  background: inherit;
+}
+
 .button.secondary {
   background: var(--outline);
+}
+
+.button.success {
+  background: #1f7a45;
+}
+
+.button.success:hover {
+  background: #166138;
+}
+
+.button.danger {
+  background: #c0392b;
+}
+
+.button.danger:hover {
+  background: #a93226;
 }
 
 .button.ghost {
@@ -171,6 +198,25 @@ a {
   word-break: break-word;
   font-size: 0.8rem;
   color: inherit;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 9, 12, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  width: min(520px, 100%);
+  box-shadow: 0 20px 40px rgba(12, 12, 14, 0.2);
 }
 
 .muted {
