@@ -160,6 +160,7 @@ export default function CompanyHome() {
 
   const isRejectDisabled =
     rejectReason.trim().length === 0 || rejectReason.trim().length > 500;
+  const rejectReasonCount = rejectReason.trim().length;
 
   return (
     <div className="stack">
@@ -311,6 +312,7 @@ export default function CompanyHome() {
                             type="button"
                             disabled={!isRequested || actioningId === advance.id}
                             onClick={() => openApproveDialog(advance)}
+                            title={isRequested ? '' : 'requested の申請のみ操作できます'}
                           >
                             承認
                           </button>
@@ -319,6 +321,7 @@ export default function CompanyHome() {
                             type="button"
                             disabled={!isRequested || actioningId === advance.id}
                             onClick={() => openRejectDialog(advance)}
+                            title={isRequested ? '' : 'requested の申請のみ操作できます'}
                           >
                             否認
                           </button>
@@ -374,6 +377,15 @@ export default function CompanyHome() {
                   }}
                   placeholder="否認理由を入力してください"
                 />
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <span className="muted">理由を入力してください。</span>
+                  <span
+                    className={rejectReasonCount > 500 ? 'error' : 'muted'}
+                    style={{ padding: 0, border: 'none', background: 'transparent' }}
+                  >
+                    {rejectReasonCount}/500
+                  </span>
+                </div>
                 <div className="muted">
                   入力した否認理由は、今後アプリ内でドライバーに表示される予定です。
                 </div>
@@ -384,6 +396,7 @@ export default function CompanyHome() {
                     type="button"
                     onClick={handleReject}
                     disabled={isRejectDisabled || actioningId === dialog.advance.id}
+                    title={isRejectDisabled ? '否認理由を入力してください（最大500文字）' : ''}
                   >
                     否認する
                   </button>

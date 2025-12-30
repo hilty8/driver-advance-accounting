@@ -125,6 +125,17 @@ a {
   background: var(--accent-deep);
 }
 
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.button:disabled:hover {
+  transform: none;
+  background: inherit;
+}
+
 .button.secondary {
   background: var(--outline);
 }
