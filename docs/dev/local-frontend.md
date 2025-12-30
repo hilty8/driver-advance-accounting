@@ -4,6 +4,7 @@
 
 - backend が起動済み（例: `http://localhost:3000`）
 - `docs/spec/openapi_min.yaml` が最新
+ - backend のAPI変更後は dev サーバを再起動すること（ホットリロードで反映されない場合がある）
 
 ## セットアップ
 
@@ -13,7 +14,7 @@ npm install
 cp .env.local.example .env.local
 ```
 
-`frontend/.env.local` の `NEXT_PUBLIC_API_BASE_URL` を backend のURLに合わせる。
+`frontend/.env.local` の `NEXT_PUBLIC_API_BASE_URL` を backend のURLに合わせる（末尾の `/` は付けない）。
 
 ## DB起動と初期データ（開発用ユーザー）
 

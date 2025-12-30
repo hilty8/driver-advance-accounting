@@ -30,9 +30,18 @@ export const AdvanceSchema = z.object({
   id: z.string(),
   driverId: z.string(),
   companyId: z.string(),
+  driverEmail: z.string().nullable().optional(),
+  driverName: z.string().nullable().optional(),
   requestedAmount: z.string(),
   status: z.string()
 }).passthrough();
+
+export const AdvanceListSchema = z.array(AdvanceSchema);
+
+export const AdvanceAvailabilitySchema = z.object({
+  availableAmount: z.string(),
+  deductedAmount: z.string()
+});
 
 export const PayrollSchema = z.object({
   id: z.string(),

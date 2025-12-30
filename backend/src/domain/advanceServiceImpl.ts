@@ -1,21 +1,12 @@
-import { Decimal } from '@prisma/client/runtime/library';
 import { prisma } from '../repositories/prisma/client';
 import { PrismaAdvanceRepository } from '../repositories/prisma/advanceRepository';
 import { PrismaLedgerRepository } from '../repositories/prisma/ledgerRepository';
 import { AdvanceService } from './services';
 import { Advance, UUID, Yen } from './types';
 import { monthStart, toDateOnly } from './dates';
-import { decimalToScaledBigInt } from './math';
 import { newUuid } from './ids';
 import { calculateAdvanceLimit, calculateFee } from '../batch/batchMath';
-
-const RATE_SCALE = 10000n;
-
-const decimalToRateScaled = (value: Decimal | number | string): bigint => {
-  if (typeof value === 'number') return BigInt(Math.round(value * Number(RATE_SCALE)));
-  if (typeof value === 'string') return decimalToScaledBigInt(value, 4);
-  return decimalToScaledBigInt(value.toString(), 4);
-};
+import { computeAvailableAdvance, decimalToRateScaled, RATE_SCALE } from './advanceAvailability';
 
 const ensureRequested = (advance: Advance): void => {
   if (advance.status !== 'requested') {
@@ -59,15 +50,14 @@ export class AdvanceServiceImpl implements AdvanceService {
 
     const advanceBalance = await this.ledgerRepo.sumAdvanceBalance(driverId, driver.company_id, asOf);
     const limitRateScaled = decimalToRateScaled(company.limit_rate);
-    const baseLimit = calculateAdvanceLimit(unpaidConfirmed, advanceBalance, limitRateScaled, RATE_SCALE);
-
-    if (!company.allow_advance_over_salary) {
-      const cap = currentMonthAmount - advanceBalance;
-      const effectiveCap = cap > 0n ? cap : 0n;
-      return baseLimit < effectiveCap ? baseLimit : effectiveCap;
-    }
-
-    return baseLimit;
+    return computeAvailableAdvance({
+      unpaidConfirmed,
+      advanceBalance,
+      limitRateScaled,
+      allowAdvanceOverSalary: company.allow_advance_over_salary,
+      currentMonthConfirmed: currentMonthAmount,
+      scale: RATE_SCALE
+    });
   }
 
   async requestAdvance(driverId: UUID, amount: Yen): Promise<Advance> {

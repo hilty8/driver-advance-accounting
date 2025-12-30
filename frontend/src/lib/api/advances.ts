@@ -8,3 +8,8 @@ export const createAdvance = (driverId: string, amount: string) =>
     method: 'POST',
     body: JSON.stringify({ amount })
   });
+
+export const listCompanyAdvances = (companyId: string) =>
+  apiFetch<Advance[]>(`/companies/${companyId}/advances`, {
+    method: 'GET'
+  });

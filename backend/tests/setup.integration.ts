@@ -1,9 +1,11 @@
 import { config } from 'dotenv';
-import path from 'path';
+import path from 'node:path';
 import { migrateTestDb, resetTestDb } from './helpers/db';
 import { prisma } from '../src/repositories/prisma/client';
 
-config({ path: path.resolve(__dirname, '../.env.test') });
+delete process.env.DATABASE_URL;
+delete process.env.JWT_SECRET;
+config({ path: path.resolve(__dirname, '../.env.test'), override: true });
 
 let migrated = false;
 

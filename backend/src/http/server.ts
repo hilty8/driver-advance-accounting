@@ -26,7 +26,9 @@ import {
   createAdvanceMarkPaidHandler,
   createAdvancePayoutInstructHandler,
   createAdvanceRejectHandler,
-  createAdvanceRequestHandler
+  createAdvanceRequestHandler,
+  createCompanyAdvancesListHandler,
+  createDriverAdvanceAvailabilityHandler
 } from './advances';
 import { createCollectionOverrideHandler } from './payrolls';
 import { createDriverInviteAcceptHandler, createDriverInviteHandler } from './driverInvites';
@@ -62,6 +64,15 @@ const matchCompanySettings = (method: string | undefined, url: string | undefine
   return { companyId: match[1], method };
 };
 
+const matchCompanyAdvancesList = (method: string | undefined, url: string | undefined) => {
+  if (!method || !url) return null;
+  if (method !== 'GET') return null;
+  const path = url.split('?')[0];
+  const match = path.match(/^\/companies\/([^/]+)\/advances$/);
+  if (!match) return null;
+  return { companyId: match[1] };
+};
+
 const matchDriverCreate = (method: string | undefined, url: string | undefined) => {
   if (!method || !url) return null;
   if (method !== 'POST') return null;
@@ -84,6 +95,15 @@ const matchDriverDelete = (method: string | undefined, url: string | undefined) 
   if (method !== 'DELETE') return null;
   const path = url.split('?')[0];
   const match = path.match(/^\/drivers\/([^/]+)$/);
+  if (!match) return null;
+  return { driverId: match[1] };
+};
+
+const matchDriverAdvanceAvailability = (method: string | undefined, url: string | undefined) => {
+  if (!method || !url) return null;
+  if (method !== 'GET') return null;
+  const path = url.split('?')[0];
+  const match = path.match(/^\/drivers\/([^/]+)\/advance-availability$/);
   if (!match) return null;
   return { driverId: match[1] };
 };
@@ -492,6 +512,8 @@ export const createServer = () => {
   const advanceRejectHandler = createAdvanceRejectHandler();
   const advancePayoutInstructHandler = createAdvancePayoutInstructHandler();
   const advanceMarkPaidHandler = createAdvanceMarkPaidHandler();
+  const companyAdvancesListHandler = createCompanyAdvancesListHandler();
+  const driverAdvanceAvailabilityHandler = createDriverAdvanceAvailabilityHandler();
   const collectionOverrideHandler = createCollectionOverrideHandler();
   const driverInviteHandler = createDriverInviteHandler(mailer);
   const driverInviteAcceptHandler = createDriverInviteAcceptHandler();
@@ -528,6 +550,26 @@ export const createServer = () => {
         }
         const body = await parseJsonBody(req);
         const result = await settingsHandler({ companyId: match.companyId, body });
+        return sendJson(res, result.status, result.body);
+      }
+
+      const listMatch = matchCompanyAdvancesList(req.method, req.url);
+      if (listMatch) {
+        const authError = requireAuth(authUser, ['company']);
+        if (authError) return sendJson(res, authError.status, authError.body);
+        const ownershipError = requireCompanyOwnership(authUser, listMatch.companyId);
+        if (ownershipError) return sendJson(res, ownershipError.status, ownershipError.body);
+        const result = await companyAdvancesListHandler({ companyId: listMatch.companyId, body: null });
+        return sendJson(res, result.status, result.body);
+      }
+
+      const availabilityMatch = matchDriverAdvanceAvailability(req.method, req.url);
+      if (availabilityMatch) {
+        const authError = requireAuth(authUser, ['driver']);
+        if (authError) return sendJson(res, authError.status, authError.body);
+        const ownershipError = await requireDriverAccess(authUser, availabilityMatch.driverId);
+        if (ownershipError) return sendJson(res, ownershipError.status, ownershipError.body);
+        const result = await driverAdvanceAvailabilityHandler({ driverId: availabilityMatch.driverId, body: null });
         return sendJson(res, result.status, result.body);
       }
 

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../src/domain/passwords';
+import { monthStart } from '../src/domain/dates';
 
 const prisma = new PrismaClient();
 
@@ -93,6 +94,33 @@ const main = async () => {
     console.log(`seed: driver user created (${DRIVER_EMAIL})`);
   } else {
     console.log(`seed: user already exists, skipped (${DRIVER_EMAIL})`);
+  }
+
+  if (driverId) {
+    const currentMonth = monthStart(new Date());
+    const existingEarning = await prisma.earnings.findFirst({
+      where: {
+        driver_id: driverId,
+        company_id: companyId,
+        payout_month: currentMonth,
+        status: 'confirmed'
+      }
+    });
+    if (!existingEarning) {
+      await prisma.earnings.create({
+        data: {
+          driver_id: driverId,
+          company_id: companyId,
+          work_month: currentMonth,
+          payout_month: currentMonth,
+          amount: 200000n,
+          status: 'confirmed'
+        }
+      });
+      console.log(`seed: earnings created for (${DRIVER_EMAIL})`);
+    } else {
+      console.log(`seed: earnings already exist for (${DRIVER_EMAIL})`);
+    }
   }
 };
 

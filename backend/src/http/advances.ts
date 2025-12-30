@@ -2,6 +2,10 @@ import { z } from 'zod';
 import { AdvanceServiceImpl } from '../domain/advanceServiceImpl';
 import { parsePositiveBigInt } from './csv';
 import { jsonError } from './errors';
+import { prisma } from '../repositories/prisma/client';
+import { PrismaLedgerRepository } from '../repositories/prisma/ledgerRepository';
+import { computeAvailableAdvance, decimalToRateScaled, RATE_SCALE } from '../domain/advanceAvailability';
+import { monthStart } from '../domain/dates';
 
 const RequestSchema = z.object({
   amount: z.string()
@@ -26,6 +30,7 @@ const MarkPaidSchema = z.object({
 type HandlerInput = {
   driverId?: string;
   advanceId?: string;
+  companyId?: string;
   body: unknown;
 };
 
@@ -33,6 +38,39 @@ type HandlerResponse = {
   status: number;
   body: unknown;
 };
+
+const mapAdvanceRow = (row: {
+  id: string;
+  driver_id: string;
+  company_id: string;
+  requested_amount: bigint;
+  requested_at: Date;
+  approved_amount: bigint | null;
+  fee_amount: bigint | null;
+  payout_amount: bigint | null;
+  payout_date: Date | null;
+  status: string;
+  memo: string | null;
+  created_at: Date;
+  updated_at: Date;
+  driver?: { email: string | null; name: string | null } | null;
+}) => ({
+  id: row.id,
+  driverId: row.driver_id,
+  companyId: row.company_id,
+  driverEmail: row.driver?.email ?? undefined,
+  driverName: row.driver?.name ?? undefined,
+  requestedAmount: row.requested_amount,
+  requestedAt: row.requested_at,
+  approvedAmount: row.approved_amount ?? undefined,
+  feeAmount: row.fee_amount ?? undefined,
+  payoutAmount: row.payout_amount ?? undefined,
+  payoutDate: row.payout_date ?? undefined,
+  status: row.status,
+  memo: row.memo ?? undefined,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
 
 const parseDateTime = (value: string): Date | null => {
   const date = new Date(value);
@@ -135,5 +173,74 @@ export const createAdvanceMarkPaidHandler = () => {
     } catch (error) {
       return { status: 400, body: jsonError((error as Error).message) };
     }
+  };
+};
+
+export const createCompanyAdvancesListHandler = () => {
+  return async (input: HandlerInput): Promise<HandlerResponse> => {
+    if (!input.companyId) return { status: 400, body: jsonError('companyId is required') };
+    const rows = await prisma.advances.findMany({
+      where: { company_id: input.companyId },
+      orderBy: { created_at: 'desc' },
+    include: { driver: { select: { email: true, name: true } } }
+    });
+    const advances = rows.map(mapAdvanceRow);
+    return { status: 200, body: advances };
+  };
+};
+
+export const createDriverAdvanceAvailabilityHandler = () => {
+  const ledgerRepo = new PrismaLedgerRepository();
+  return async (input: HandlerInput): Promise<HandlerResponse> => {
+    if (!input.driverId) return { status: 400, body: jsonError('driverId is required') };
+
+    const driver = await prisma.drivers.findUnique({ where: { id: input.driverId } });
+    if (!driver) return { status: 404, body: jsonError('driver not found') };
+
+    const company = await prisma.companies.findUnique({ where: { id: driver.company_id } });
+    if (!company) return { status: 404, body: jsonError('company not found') };
+
+    const now = new Date();
+    const unpaid = await prisma.earnings.aggregate({
+      where: {
+        driver_id: driver.id,
+        company_id: driver.company_id,
+        status: 'confirmed',
+        payout_month: { gte: monthStart(now) }
+      },
+      _sum: { amount: true }
+    });
+    const unpaidConfirmed = BigInt(unpaid._sum.amount ?? 0);
+
+    const currentMonth = monthStart(now);
+    const currentMonthConfirmed = await prisma.earnings.aggregate({
+      where: {
+        driver_id: driver.id,
+        company_id: driver.company_id,
+        status: 'confirmed',
+        payout_month: currentMonth
+      },
+      _sum: { amount: true }
+    });
+    const currentMonthAmount = BigInt(currentMonthConfirmed._sum.amount ?? 0);
+
+    const advanceBalance = await ledgerRepo.sumAdvanceBalance(driver.id, driver.company_id, now);
+    const limitRateScaled = decimalToRateScaled(company.limit_rate);
+    const availableAmount = computeAvailableAdvance({
+      unpaidConfirmed,
+      advanceBalance,
+      limitRateScaled,
+      allowAdvanceOverSalary: company.allow_advance_over_salary,
+      currentMonthConfirmed: currentMonthAmount,
+      scale: RATE_SCALE
+    });
+
+    return {
+      status: 200,
+      body: {
+        availableAmount,
+        deductedAmount: advanceBalance
+      }
+    };
   };
 };
