@@ -11,17 +11,25 @@ import { computeAvailableAdvance, decimalToRateScaled, RATE_SCALE } from './adva
 
 export class AdvanceStatusError extends Error {
   readonly status: string;
+  readonly expectedStatus: string;
 
-  constructor(advanceId: UUID, status: string) {
-    super(`advance ${advanceId} is not in requested status`);
+  constructor(advanceId: UUID, status: string, expectedStatus: string) {
+    super(`advance ${advanceId} is not in ${expectedStatus} status`);
     this.name = 'AdvanceStatusError';
     this.status = status;
+    this.expectedStatus = expectedStatus;
   }
 }
 
 const ensureRequested = (advance: Advance): void => {
   if (advance.status !== 'requested') {
-    throw new AdvanceStatusError(advance.id, advance.status);
+    throw new AdvanceStatusError(advance.id, advance.status, 'requested');
+  }
+};
+
+const ensureApproved = (advance: Advance): void => {
+  if (advance.status !== 'approved') {
+    throw new AdvanceStatusError(advance.id, advance.status, 'approved');
   }
 };
 
@@ -159,27 +167,15 @@ export class AdvanceServiceImpl implements AdvanceService {
     });
   }
 
-  async markPayoutInstructed(advanceId: UUID, payoutScheduledAt: Date): Promise<Advance> {
-    const advance = await this.advanceRepo.findById(advanceId);
-    if (!advance) throw new Error(`advance not found: ${advanceId}`);
-
-    return this.advanceRepo.save({
-      ...advance,
-      status: 'payout_instructed',
-      payoutDate: toDateOnly(payoutScheduledAt),
-      memo: advance.memo,
-      updatedAt: new Date()
-    });
-  }
-
   async markPaid(advanceId: UUID, payoutDate: Date): Promise<Advance> {
     const advance = await this.advanceRepo.findById(advanceId);
     if (!advance) throw new Error(`advance not found: ${advanceId}`);
+    ensureApproved(advance);
 
     return this.advanceRepo.save({
       ...advance,
       status: 'paid',
-      payoutDate,
+      payoutDate: toDateOnly(payoutDate),
       updatedAt: new Date()
     });
   }

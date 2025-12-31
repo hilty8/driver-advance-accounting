@@ -5,7 +5,6 @@ export interface AdvanceService {
   requestAdvance(driverId: UUID, amount: Yen): Promise<Advance>;
   approveAdvance(advanceId: UUID, approvedAt: Date): Promise<Advance>;
   rejectAdvance(advanceId: UUID, reason?: string): Promise<Advance>;
-  markPayoutInstructed(advanceId: UUID, payoutScheduledAt: Date): Promise<Advance>;
   markPaid(advanceId: UUID, payoutDate: Date): Promise<Advance>;
   writeOff(advanceId: UUID, amount: Yen, memo?: string): Promise<Advance>;
 }
@@ -18,4 +17,3 @@ export interface PayrollService {
 export interface BatchService {
   runDailyBatch(targetDate: Date): Promise<void>;
 }
-

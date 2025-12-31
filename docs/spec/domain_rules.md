@@ -13,7 +13,8 @@
 
 ## ステータス
 
-- 前借り: `requested/rejected/approved/payout_instructed/paid/settling/settled/written_off`
+- 前借り: `requested/rejected/approved/paid/settling/settled/written_off`
+  - `payout_instructed` は現在使用しない（予約済みステータス）
 - 給与: `planned/processed`
 - 画面上の表示文言は簡略化してよいが、内部状態の対応は固定する。
 

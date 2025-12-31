@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { getSession } from '@/lib/auth/session';
 import { createDriver, inviteDriver } from '@/lib/api/drivers';
-import { approveAdvance, listCompanyAdvances, rejectAdvance, type Advance } from '@/lib/api/advances';
+import { approveAdvance, listCompanyAdvances, markAdvancePaid, rejectAdvance, type Advance } from '@/lib/api/advances';
 import type { ApiErrorPayload } from '@/lib/api/client';
 
 export default function CompanyHome() {
@@ -21,7 +21,10 @@ export default function CompanyHome() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<{ type: 'approve' | 'reject'; advance: Advance } | null>(null);
+  const [dialog, setDialog] = useState<{
+    type: 'approve' | 'reject' | 'markPaid';
+    advance: Advance;
+  } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [dialogError, setDialogError] = useState<string | null>(null);
 
@@ -38,10 +41,8 @@ export default function CompanyHome() {
         return '承認';
       case 'rejected':
         return '否認';
-      case 'payout_instructed':
-        return '振込指示';
       case 'paid':
-        return '支払済';
+        return '承認（振込済み）';
       case 'write_off':
       case 'written_off':
         return '貸倒';
@@ -117,6 +118,13 @@ export default function CompanyHome() {
     setActionMessage(null);
   };
 
+  const openMarkPaidDialog = (advance: Advance) => {
+    setDialog({ type: 'markPaid', advance });
+    setDialogError(null);
+    setActionError(null);
+    setActionMessage(null);
+  };
+
   const handleApprove = async () => {
     if (!dialog || dialog.type !== 'approve') return;
     setActioningId(dialog.advance.id);
@@ -149,6 +157,22 @@ export default function CompanyHome() {
     try {
       await rejectAdvance(dialog.advance.id, reason);
       setActionMessage('否認しました。');
+      await fetchList();
+      setDialog(null);
+    } catch (err) {
+      setActionError(formatActionError(err as ApiErrorPayload));
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleMarkPaid = async () => {
+    if (!dialog || dialog.type !== 'markPaid') return;
+    setActioningId(dialog.advance.id);
+    setDialogError(null);
+    try {
+      await markAdvancePaid(dialog.advance.id, new Date().toISOString());
+      setActionMessage('振込済みに更新しました。');
       await fetchList();
       setDialog(null);
     } catch (err) {
@@ -288,6 +312,7 @@ export default function CompanyHome() {
               <tbody>
                 {advanceList.map((advance) => {
                   const isRequested = advance.status === 'requested';
+                  const isApproved = advance.status === 'approved';
                   return (
                     <tr key={advance.id}>
                       <td style={{ padding: '8px', borderTop: '1px solid #eee' }}>
@@ -324,6 +349,15 @@ export default function CompanyHome() {
                             title={isRequested ? '' : 'requested の申請のみ操作できます'}
                           >
                             否認
+                          </button>
+                          <button
+                            className="button"
+                            type="button"
+                            disabled={!isApproved || actioningId === advance.id}
+                            onClick={() => openMarkPaidDialog(advance)}
+                            title={isApproved ? '' : 'approved の申請のみ操作できます'}
+                          >
+                            振込済みに更新
                           </button>
                         </div>
                       </td>
@@ -365,50 +399,78 @@ export default function CompanyHome() {
               </div>
             ) : (
               <div className="stack">
-                <h4>前借り申請を否認しますか？</h4>
-                <p className="muted">否認理由の入力が必須です（最大500文字）。</p>
-                <textarea
-                  className="input"
-                  rows={4}
-                  value={rejectReason}
-                  onChange={(event) => {
-                    setRejectReason(event.target.value);
-                    setDialogError(null);
-                  }}
-                  placeholder="否認理由を入力してください"
-                />
-                <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <span className="muted">理由を入力してください。</span>
-                  <span
-                    className={rejectReasonCount > 500 ? 'error' : 'muted'}
-                    style={{ padding: 0, border: 'none', background: 'transparent' }}
-                  >
-                    {rejectReasonCount}/500
-                  </span>
-                </div>
-                <div className="muted">
-                  入力した否認理由は、今後アプリ内でドライバーに表示される予定です。
-                </div>
-                {dialogError ? <div className="error">{dialogError}</div> : null}
-                <div className="row">
-                  <button
-                    className="button danger"
-                    type="button"
-                    onClick={handleReject}
-                    disabled={isRejectDisabled || actioningId === dialog.advance.id}
-                    title={isRejectDisabled ? '否認理由を入力してください（最大500文字）' : ''}
-                  >
-                    否認する
-                  </button>
-                  <button
-                    className="button ghost"
-                    type="button"
-                    onClick={() => setDialog(null)}
-                    disabled={actioningId === dialog.advance.id}
-                  >
-                    キャンセル
-                  </button>
-                </div>
+                {dialog.type === 'reject' ? (
+                  <>
+                    <h4>前借り申請を否認しますか？</h4>
+                    <p className="muted">否認理由の入力が必須です（最大500文字）。</p>
+                    <textarea
+                      className="input"
+                      rows={4}
+                      value={rejectReason}
+                      onChange={(event) => {
+                        setRejectReason(event.target.value);
+                        setDialogError(null);
+                      }}
+                      placeholder="否認理由を入力してください"
+                    />
+                    <div className="row" style={{ justifyContent: 'space-between' }}>
+                      <span className="muted">理由を入力してください。</span>
+                      <span
+                        className={rejectReasonCount > 500 ? 'error' : 'muted'}
+                        style={{ padding: 0, border: 'none', background: 'transparent' }}
+                      >
+                        {rejectReasonCount}/500
+                      </span>
+                    </div>
+                    <div className="muted">
+                      入力した否認理由は、今後アプリ内でドライバーに表示される予定です。
+                    </div>
+                    {dialogError ? <div className="error">{dialogError}</div> : null}
+                    <div className="row">
+                      <button
+                        className="button danger"
+                        type="button"
+                        onClick={handleReject}
+                        disabled={isRejectDisabled || actioningId === dialog.advance.id}
+                        title={isRejectDisabled ? '否認理由を入力してください（最大500文字）' : ''}
+                      >
+                        否認する
+                      </button>
+                      <button
+                        className="button ghost"
+                        type="button"
+                        onClick={() => setDialog(null)}
+                        disabled={actioningId === dialog.advance.id}
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h4>前借りを振込済みに更新しますか？</h4>
+                    <p className="muted">承認済みの申請が「振込済み」に更新されます。</p>
+                    {dialogError ? <div className="error">{dialogError}</div> : null}
+                    <div className="row">
+                      <button
+                        className="button"
+                        type="button"
+                        onClick={handleMarkPaid}
+                        disabled={actioningId === dialog.advance.id}
+                      >
+                        振込済みに更新
+                      </button>
+                      <button
+                        className="button ghost"
+                        type="button"
+                        onClick={() => setDialog(null)}
+                        disabled={actioningId === dialog.advance.id}
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

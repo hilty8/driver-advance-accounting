@@ -104,10 +104,8 @@ export default function DriverHome() {
         return '承認';
       case 'rejected':
         return '否認';
-      case 'payout_instructed':
-        return '振込指示';
       case 'paid':
-        return '支払済';
+        return '振込済み';
       case 'write_off':
       case 'written_off':
         return '貸倒';

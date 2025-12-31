@@ -501,9 +501,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /advances/{id}/payout-instruct:
+  /advances/{id}/mark-paid:
     post:
-      summary: Payout instruct
+      summary: Mark advance paid
       security:
         - bearerAuth: []
       parameters:
@@ -512,6 +512,18 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payoutDate
+              properties:
+                payoutDate:
+                  type: string
+                  format: date-time
       responses:
         "200":
           description: ok
@@ -525,24 +537,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /advances/{id}/mark-paid:
-    post:
-      summary: Mark advance paid
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: ok
+        "401":
+          description: unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Advance"
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: invalid status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /advances/{id}/write-off:
     post:
       summary: Write off advance

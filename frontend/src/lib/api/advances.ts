@@ -39,3 +39,9 @@ export const rejectAdvance = (advanceId: string, reason: string) =>
     method: 'POST',
     body: JSON.stringify({ reason })
   });
+
+export const markAdvancePaid = (advanceId: string, payoutDate: string) =>
+  apiFetch<Advance>(`/advances/${advanceId}/mark-paid`, {
+    method: 'POST',
+    body: JSON.stringify({ payoutDate })
+  });
