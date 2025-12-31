@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "ts-node src/main.ts",
+    "dev:reset": "npx prisma migrate dev && SEED_MODE=dev npm run db:seed",
     "build": "tsc -p tsconfig.json",
     "test:int": "jest -c jest.int.config.ts --runInBand",
     "test:scenario": "jest -c jest.scenario.config.ts --runInBand",

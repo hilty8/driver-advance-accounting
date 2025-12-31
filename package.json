@@ -6,6 +6,7 @@
     "test:backend:int": "npm --prefix backend run test:int",
     "test:backend:scenario": "npm --prefix backend run test:scenario",
     "test:frontend": "npm --prefix frontend run generate:openapi && npm --prefix frontend run build",
-    "test:all": "npm run test:backend:unit && npm run test:backend:int && npm run test:backend:scenario && npm run test:frontend"
+    "test:all": "npm run test:backend:unit && npm run test:backend:int && npm run test:backend:scenario && npm run test:frontend",
+    "dev:reset:backend": "npm --prefix backend run dev:reset"
   }
 }
