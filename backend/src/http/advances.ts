@@ -19,10 +19,6 @@ const RejectSchema = z.object({
   reason: z.string().trim().min(1).max(500)
 });
 
-const PayoutInstructSchema = z.object({
-  payoutScheduledAt: z.string()
-});
-
 const MarkPaidSchema = z.object({
   payoutDate: z.string()
 });
@@ -138,7 +134,10 @@ export const createAdvanceApproveHandler = () => {
       return { status: 200, body: advance };
     } catch (error) {
       if (error instanceof AdvanceStatusError) {
-        return { status: 409, body: jsonError('advance is not in requested status') };
+        return {
+          status: 409,
+          body: jsonError(`advance is not in ${error.expectedStatus} status`)
+        };
       }
       return { status: 400, body: jsonError((error as Error).message) };
     }
@@ -176,37 +175,21 @@ export const createAdvanceRejectHandler = () => {
       return { status: 200, body: advance };
     } catch (error) {
       if (error instanceof AdvanceStatusError) {
-        return { status: 409, body: jsonError('advance is not in requested status') };
+        return {
+          status: 409,
+          body: jsonError(`advance is not in ${error.expectedStatus} status`)
+        };
       }
       return { status: 400, body: jsonError((error as Error).message) };
     }
   };
 };
 
-export const createAdvancePayoutInstructHandler = () => {
-  const service = new AdvanceServiceImpl();
-  return async (input: HandlerInput): Promise<HandlerResponse> => {
-    if (!input.advanceId) return { status: 400, body: jsonError('advanceId is required') };
-    const parsed = PayoutInstructSchema.safeParse(input.body);
-    if (!parsed.success) {
-      return { status: 400, body: jsonError('invalid payload', parsed.error.flatten()) };
-    }
-    const payoutScheduledAt = parseDateTime(parsed.data.payoutScheduledAt);
-    if (!payoutScheduledAt) return { status: 400, body: jsonError('payoutScheduledAt is invalid') };
-
-    try {
-      const advance = await service.markPayoutInstructed(input.advanceId, payoutScheduledAt);
-      return { status: 200, body: advance };
-    } catch (error) {
-      return { status: 400, body: jsonError((error as Error).message) };
-    }
-  };
-};
-
 export const createAdvanceMarkPaidHandler = () => {
-  const service = new AdvanceServiceImpl();
   return async (input: HandlerInput): Promise<HandlerResponse> => {
     if (!input.advanceId) return { status: 400, body: jsonError('advanceId is required') };
+    if (!input.actorUserId) return { status: 400, body: jsonError('actorUserId is required') };
+    const advanceId = input.advanceId;
     const parsed = MarkPaidSchema.safeParse(input.body);
     if (!parsed.success) {
       return { status: 400, body: jsonError('invalid payload', parsed.error.flatten()) };
@@ -215,9 +198,27 @@ export const createAdvanceMarkPaidHandler = () => {
     if (!payoutDate) return { status: 400, body: jsonError('payoutDate is invalid') };
 
     try {
-      const advance = await service.markPaid(input.advanceId, payoutDate);
+      const actorUserId = input.actorUserId;
+      const advance = await prisma.$transaction(async (tx) => {
+        const service = new AdvanceServiceImpl(tx);
+        const updated = await service.markPaid(advanceId, payoutDate);
+        await tx.advance_audit_logs.create({
+          data: {
+            advance_id: updated.id,
+            company_id: updated.companyId,
+            driver_id: updated.driverId,
+            actor_user_id: actorUserId,
+            action: 'paid'
+          }
+        });
+        return updated;
+      });
       return { status: 200, body: advance };
     } catch (error) {
+      if (error instanceof AdvanceStatusError) {
+        const expected = error.expectedStatus || 'approved';
+        return { status: 409, body: jsonError(`advance is not in ${expected} status`) };
+      }
       return { status: 400, body: jsonError((error as Error).message) };
     }
   };

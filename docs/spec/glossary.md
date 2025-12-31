@@ -34,7 +34,7 @@
 | AdvanceStatus | requested | 申請中 |
 | AdvanceStatus | rejected | 却下 |
 | AdvanceStatus | approved | 承認済み |
-| AdvanceStatus | payout_instructed | 振込指示済み |
+| AdvanceStatus | payout_instructed | 振込指示済み（現在は未使用） |
 | AdvanceStatus | paid | 振込済み |
 | AdvanceStatus | settling | 回収中 |
 | AdvanceStatus | settled | 完済 |

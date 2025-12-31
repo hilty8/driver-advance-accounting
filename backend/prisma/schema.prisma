@@ -28,6 +28,7 @@ enum AdvanceStatus {
 enum AdvanceAuditAction {
   approved
   rejected
+  paid
 }
 
 enum PayrollStatus {

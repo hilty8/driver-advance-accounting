@@ -2,7 +2,7 @@
 
 Assumptions:
 - 手数料計上および前借り元本の ledger 記録は「承認」時に行う。
-- 振込指示は C または O が行い、振込完了は手動確認でステータス更新する。
+- 振込完了は手動確認でステータス更新する（振込指示工程は設けない）。
 - `settling` への遷移は給与回収バッチ時に行われ、本図では振込完了までを対象とする。
 
 ```mermaid
@@ -29,12 +29,8 @@ sequenceDiagram
     API->>Ledger: insert advance_principal=P, fee=F (occurred_on=承認日)
     API-->>C: status=approved, amounts確定
 
-    C->>API: POST /advances/{id}/payout-instruct (振込予定登録)
-    API-->>C: status=payout_instructed
-
     Bank-->>C: 振込完了通知 (手動確認)
     C->>API: POST /advances/{id}/mark-paid (payout_date)
     API->>Ledger: update advance status to paid
     API-->>C: status=paid
 ```
-

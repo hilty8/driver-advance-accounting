@@ -24,7 +24,6 @@ import { createMailerFromEnv } from '../integrations/smtpMailer';
 import {
   createAdvanceApproveHandler,
   createAdvanceMarkPaidHandler,
-  createAdvancePayoutInstructHandler,
   createAdvanceRejectHandler,
   createAdvanceRequestHandler,
   createCompanyAdvancesListHandler,
@@ -174,15 +173,6 @@ const matchAdvanceReject = (method: string | undefined, url: string | undefined)
   if (method !== 'POST') return null;
   const path = url.split('?')[0];
   const match = path.match(/^\/advances\/([^/]+)\/reject$/);
-  if (!match) return null;
-  return { advanceId: match[1] };
-};
-
-const matchAdvancePayoutInstruct = (method: string | undefined, url: string | undefined) => {
-  if (!method || !url) return null;
-  if (method !== 'POST') return null;
-  const path = url.split('?')[0];
-  const match = path.match(/^\/advances\/([^/]+)\/payout-instruct$/);
   if (!match) return null;
   return { advanceId: match[1] };
 };
@@ -520,7 +510,6 @@ export const createServer = () => {
   const advanceRequestHandler = createAdvanceRequestHandler();
   const advanceApproveHandler = createAdvanceApproveHandler();
   const advanceRejectHandler = createAdvanceRejectHandler();
-  const advancePayoutInstructHandler = createAdvancePayoutInstructHandler();
   const advanceMarkPaidHandler = createAdvanceMarkPaidHandler();
   const companyAdvancesListHandler = createCompanyAdvancesListHandler();
   const driverAdvancesListHandler = createDriverAdvancesListHandler();
@@ -706,17 +695,6 @@ export const createServer = () => {
         return sendJson(res, result.status, result.body);
       }
 
-      const advancePayoutInstructMatch = matchAdvancePayoutInstruct(req.method, req.url);
-      if (advancePayoutInstructMatch) {
-        const authError = requireAuth(authUser, ['admin', 'operator', 'company']);
-        if (authError) return sendJson(res, authError.status, authError.body);
-        const ownershipError = await requireAdvanceAccess(authUser, advancePayoutInstructMatch.advanceId);
-        if (ownershipError) return sendJson(res, ownershipError.status, ownershipError.body);
-        const body = await parseJsonBody(req);
-        const result = await advancePayoutInstructHandler({ advanceId: advancePayoutInstructMatch.advanceId, body });
-        return sendJson(res, result.status, result.body);
-      }
-
       const advanceMarkPaidMatch = matchAdvanceMarkPaid(req.method, req.url);
       if (advanceMarkPaidMatch) {
         const authError = requireAuth(authUser, ['admin', 'operator', 'company']);
@@ -724,7 +702,11 @@ export const createServer = () => {
         const ownershipError = await requireAdvanceAccess(authUser, advanceMarkPaidMatch.advanceId);
         if (ownershipError) return sendJson(res, ownershipError.status, ownershipError.body);
         const body = await parseJsonBody(req);
-        const result = await advanceMarkPaidHandler({ advanceId: advanceMarkPaidMatch.advanceId, body });
+        const result = await advanceMarkPaidHandler({
+          advanceId: advanceMarkPaidMatch.advanceId,
+          body,
+          actorUserId: authUser?.id
+        });
         return sendJson(res, result.status, result.body);
       }
 
