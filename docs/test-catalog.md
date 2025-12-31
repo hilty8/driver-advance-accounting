@@ -37,6 +37,8 @@
 | F07 | 回収上書き/貸倒 | 例外処理で回収や貸倒を調整できる | `docs/spec/business_logic.md#給与支給時の回収`, `docs/spec/business_logic.md#貸倒` |
 | F08 | CSV/請求 | CSV運用と請求料率を管理できる | `docs/spec/integrations_io.md#csv-インポート`, `docs/spec/integrations_io.md#csv-エクスポート候補`, `docs/spec/revenue_billing.md#収益請求` |
 | F09 | 会社オンボーディング | Cが決済と初期設定を完了して利用開始できる | `docs/spec/openapi_min.yaml#/paths/~1onboarding~1company/post`, `docs/spec/openapi_min.yaml#/paths/~1billing~1preview/post`, `docs/spec/openapi_min.yaml#/paths/~1billing~1run/post`, `docs/spec/openapi_min.yaml#/paths/~1stripe~1customers/post`, `docs/spec/openapi_min.yaml#/paths/~1stripe~1invoices~1finalize/post`, `docs/spec/openapi_min.yaml#/paths/~1stripe~1invoices~1send/post`, `docs/spec/openapi_min.yaml#/paths/~1stripe~1webhook/post`, `docs/spec/features_screens.md#c-事業者`, `docs/spec/user_flows.md#ユーザーストーリー大まかなフロー` |
+| F10 | 稼働登録 | Companyが「案件（稼働パターン）」と「稼働（実績）」を登録できる | TBD |
+| F11 | Company ドライバー一覧 | Companyが自社ドライバー一覧（名前/メール）を確認できる | TBD |
 
 | Feature | SubFeature | 名称（短い） | 目的（ユーザー価値） | Spec | Unit | Integration | Contract | Scenario | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -67,6 +69,11 @@
 | F09 | SF02 | Stripe 請求準備 | Stripe 顧客/請求レコードを作成できる | `docs/spec/openapi_min.yaml#/paths/~1stripe~1customers/post`, `docs/spec/openapi_min.yaml#/paths/~1billing~1preview/post`, `docs/spec/openapi_min.yaml#/paths/~1billing~1run/post` | - | - | - | TBD | Design |
 | F09 | SF03 | Stripe 請求確定 | Stripe 請求を確定できる | `docs/spec/openapi_min.yaml#/paths/~1stripe~1invoices~1finalize/post`, `docs/spec/openapi_min.yaml#/paths/~1stripe~1invoices~1send/post` | - | - | - | TBD | Design |
 | F09 | SF04 | Stripe Webhook 反映 | Webhook で請求結果を反映できる | `docs/spec/openapi_min.yaml#/paths/~1stripe~1webhook/post` | - | - | - | TBD | Design |
+| F10 | SF01 | 案件マスタ登録 | 会社が案件名と単価を登録でき、稼働入力の前提を整える | TBD | - | TBD | - | (manual) TBD | Design |
+| F10 | SF02 | 稼働登録 | 案件ID + 日付 + 個数 を登録できる | TBD | - | TBD | - | (manual) TBD | Design |
+| F10 | SF03 | 稼働の編集制限 | 過去分の編集可否を制御できる | TBD（備考: 稼働に確定/不確定ステータスは設けない / 編集可能期間は“直近分のみ” / 例: 4月なら2月以前は編集不可） | - | TBD | - | (manual) TBD | Design |
+| F10 | SF04 | 上限計算へ稼働を反映 | 稼働登録が前借り上限に反映される | TBD（備考: 稼働登録が前借り上限（F03）に反映され、デモで一連が成立する / 前借り上限算出対象は「給与として未払いの稼働」を全て対象） | - | TBD | - | (manual) TBD | Design |
+| F11 | SF01 | ドライバー一覧 | Companyが自社ドライバー（名前/メール）を確認できる | TBD | - | TBD | - | (manual) TBD | Design |
 
 ## Changelog
 
@@ -85,3 +92,5 @@
 - 2026-01-01: 台帳は画面構成ではなく能力単位で管理する方針を明記
 - 2026-01-01: 台帳の整合調整（F00/F02 の担保先・備考・409条件を明文化）
 - 2026-01-01: F05（Feature定義）を支払済み反映に統一し、Spec参照を #振込済み反映 に合わせた
+- 2026-01-01: F10（稼働登録）/F11（Companyドライバー一覧）を台帳に追加（Design）
+- 2026-01-01: F10/F11 のテスト列表記（- / TBD）を整形し、F10 SF03/SF04 の長文を Spec備考へ移動
