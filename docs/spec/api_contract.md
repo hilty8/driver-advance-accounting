@@ -24,3 +24,4 @@
 ## エラー形式
 
 - 共通: `{"error": "message", "details"?: ...}`
+- 想定外エラー（500）は `requestId` を付与する: `{"error":"internal server error","requestId":"..."}`
