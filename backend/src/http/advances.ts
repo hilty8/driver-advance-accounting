@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AdvanceServiceImpl, AdvanceStatusError } from '../domain/advanceServiceImpl';
+import { AdvanceNotFoundError, AdvanceServiceImpl, AdvanceStatusError } from '../domain/advanceServiceImpl';
 import { parsePositiveBigInt } from './csv';
 import { jsonError } from './errors';
 import { prisma } from '../repositories/prisma/client';
@@ -17,10 +17,6 @@ const ApproveSchema = z.object({
 
 const RejectSchema = z.object({
   reason: z.string().trim().min(1).max(500)
-});
-
-const MarkPaidSchema = z.object({
-  payoutDate: z.string()
 });
 
 type HandlerInput = {
@@ -190,18 +186,11 @@ export const createAdvanceMarkPaidHandler = () => {
     if (!input.advanceId) return { status: 400, body: jsonError('advanceId is required') };
     if (!input.actorUserId) return { status: 400, body: jsonError('actorUserId is required') };
     const advanceId = input.advanceId;
-    const parsed = MarkPaidSchema.safeParse(input.body);
-    if (!parsed.success) {
-      return { status: 400, body: jsonError('invalid payload', parsed.error.flatten()) };
-    }
-    const payoutDate = parseDateTime(parsed.data.payoutDate);
-    if (!payoutDate) return { status: 400, body: jsonError('payoutDate is invalid') };
-
     try {
       const actorUserId = input.actorUserId;
       const advance = await prisma.$transaction(async (tx) => {
         const service = new AdvanceServiceImpl(tx);
-        const updated = await service.markPaid(advanceId, payoutDate);
+        const updated = await service.markPaid(advanceId);
         await tx.advance_audit_logs.create({
           data: {
             advance_id: updated.id,
@@ -215,6 +204,9 @@ export const createAdvanceMarkPaidHandler = () => {
       });
       return { status: 200, body: advance };
     } catch (error) {
+      if (error instanceof AdvanceNotFoundError) {
+        return { status: 404, body: jsonError('advance not found') };
+      }
       if (error instanceof AdvanceStatusError) {
         const expected = error.expectedStatus || 'approved';
         return { status: 409, body: jsonError(`advance is not in ${expected} status`) };

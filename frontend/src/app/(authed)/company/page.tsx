@@ -171,7 +171,7 @@ export default function CompanyHome() {
     setActioningId(dialog.advance.id);
     setDialogError(null);
     try {
-      await markAdvancePaid(dialog.advance.id, new Date().toISOString());
+      await markAdvancePaid(dialog.advance.id);
       setActionMessage('振込済みに更新しました。');
       await fetchList();
       setDialog(null);

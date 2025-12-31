@@ -710,14 +710,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        payoutDate: string;
-                    };
-                };
-            };
+            requestBody?: never;
             responses: {
                 /** @description ok */
                 200: {

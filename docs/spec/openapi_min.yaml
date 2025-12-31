@@ -512,18 +512,6 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - payoutDate
-              properties:
-                payoutDate:
-                  type: string
-                  format: date-time
       responses:
         "200":
           description: ok
