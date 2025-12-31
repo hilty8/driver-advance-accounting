@@ -170,6 +170,9 @@ model advance_audit_logs {
   @@index([driver_id])
   @@index([actor_user_id])
   @@index([action])
+  @@index([created_at])
+  @@index([company_id, created_at])
+  @@index([driver_id, created_at])
 }
 
 model payrolls {

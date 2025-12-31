@@ -41,7 +41,7 @@
 | Feature | SubFeature | 名称（短い） | 目的（ユーザー価値） | Spec | Unit | Integration | Contract | Scenario | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F00 | SF01 | 共通エラー | 失敗時に共通形式で返せる | `docs/spec/api_contract.md#エラー形式`, `docs/spec/api_contract.md#403404-の使い分け`, `docs/spec/api_contract.md#ownership-403-の基準` | - | `[F00][SF01]` `backend/tests/integration/smoke.spec.ts` | - | TBD | CI |
-| F00 | SF02 | 監査ログ（運営） | Oが承認/否認履歴を一覧/検索できる | TBD | TBD | TBD | TBD | `companyId での検索に対応（詳細は後続で定義）` | Design |
+| F00 | SF02 | 監査ログ（運営） | Oが承認/否認履歴を一覧/検索できる | TBD | TBD | TBD | TBD | `companyId での検索に対応（詳細は後続で定義）` / 現時点では @@index([advance_id, created_at]) は不要。必要になったタイミングで追加する。 | Design |
 | F00 | SF03 | アプリ内通知（Driver） | Dが通知件数と一覧/詳細を参照できる | TBD | TBD | TBD | TBD | `通知件数→一覧→詳細の導線を想定（詳細は後続で定義）` | Design |
 | F01 | SF01 | ログイン | ユーザーがJWTを取得してアプリを使える | `docs/spec/openapi_min.yaml#/paths/~1auth~1login/post`, `docs/spec/api_contract.md#エラー形式` | - | `[F01][SF01]` `backend/tests/integration/auth.spec.ts` | `[F01][SF01]` `backend/tests/contracts/contract.spec.ts` | (e2e) e2e/smoke/login_roles.spec.ts | CI |
 | F01 | SF02 | ロール別ホーム | ロールに応じた初期導線を案内できる | `docs/spec/auth_routing.md#ロール別遷移ルール`, `docs/spec/auth_routing.md#未ログイン時のガード`, `docs/spec/auth_routing.md#権限不足時の扱い` | - | - | - | TBD | CI |
