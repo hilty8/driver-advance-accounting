@@ -1,5 +1,6 @@
 import * as http from 'http';
 import { IncomingMessage, ServerResponse } from 'http';
+import { randomUUID } from 'node:crypto';
 import { createCompanySettingsHandler } from './companySettings';
 import { CompanySettingsService } from '../domain/companySettingsService';
 import { PrismaCompanyRepository } from '../repositories/prisma/companyRepository';
@@ -522,6 +523,8 @@ export const createServer = () => {
   const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3001';
 
   return http.createServer(async (req, res) => {
+    const requestId = randomUUID();
+    res.setHeader('x-request-id', requestId);
     try {
       res.setHeader('Access-Control-Allow-Origin', corsOrigin);
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -940,7 +943,19 @@ export const createServer = () => {
 
       return sendJson(res, 404, jsonError('not found'));
     } catch (error) {
-      return sendJson(res, 500, jsonError((error as Error).message));
+      const err = error as Error & { code?: string };
+      const logPayload = {
+        requestId,
+        method: req.method,
+        path: req.url,
+        name: err.name,
+        message: err.message,
+        code: err.code,
+        stack: err.stack
+      };
+      // eslint-disable-next-line no-console
+      console.error('[unexpected error]', logPayload);
+      return sendJson(res, 500, { ...jsonError('internal server error'), requestId });
     }
   });
 };

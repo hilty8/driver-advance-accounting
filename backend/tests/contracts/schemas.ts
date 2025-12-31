@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 export const ErrorResponseSchema = z.object({
   error: z.string(),
-  details: z.unknown().optional()
+  details: z.unknown().optional(),
+  requestId: z.string().optional()
 });
 
 export const LoginResponseSchema = z.object({
