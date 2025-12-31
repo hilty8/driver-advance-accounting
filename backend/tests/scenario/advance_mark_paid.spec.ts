@@ -46,8 +46,7 @@ describe('[F05][SF01] scenario advance mark paid', () => {
 
     const paidRes = await request(app)
       .post(`/advances/${requestRes.body.id}/mark-paid`)
-      .set('Authorization', `Bearer ${companyToken}`)
-      .send({ payoutDate: new Date().toISOString() });
+      .set('Authorization', `Bearer ${companyToken}`);
     expect(paidRes.status).toBe(200);
   });
 });

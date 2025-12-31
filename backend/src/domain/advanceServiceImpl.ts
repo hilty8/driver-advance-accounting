@@ -21,6 +21,13 @@ export class AdvanceStatusError extends Error {
   }
 }
 
+export class AdvanceNotFoundError extends Error {
+  constructor(advanceId: UUID) {
+    super(`advance not found: ${advanceId}`);
+    this.name = 'AdvanceNotFoundError';
+  }
+}
+
 const ensureRequested = (advance: Advance): void => {
   if (advance.status !== 'requested') {
     throw new AdvanceStatusError(advance.id, advance.status, 'requested');
@@ -167,17 +174,25 @@ export class AdvanceServiceImpl implements AdvanceService {
     });
   }
 
-  async markPaid(advanceId: UUID, payoutDate: Date): Promise<Advance> {
-    const advance = await this.advanceRepo.findById(advanceId);
-    if (!advance) throw new Error(`advance not found: ${advanceId}`);
-    ensureApproved(advance);
-
-    return this.advanceRepo.save({
-      ...advance,
-      status: 'paid',
-      payoutDate: toDateOnly(payoutDate),
-      updatedAt: new Date()
+  async markPaid(advanceId: UUID): Promise<Advance> {
+    const result = await this.client.advances.updateMany({
+      where: { id: advanceId, status: 'approved' },
+      data: {
+        status: 'paid',
+        updated_at: new Date()
+      }
     });
+    if (result.count === 0) {
+      const current = await this.client.advances.findUnique({
+        where: { id: advanceId },
+        select: { status: true }
+      });
+      if (!current) throw new AdvanceNotFoundError(advanceId);
+      throw new AdvanceStatusError(advanceId, current.status, 'approved');
+    }
+    const updated = await this.advanceRepo.findById(advanceId);
+    if (!updated) throw new Error(`advance not found: ${advanceId}`);
+    return updated;
   }
 
   async writeOff(advanceId: UUID, amount: Yen, memo?: string): Promise<Advance> {
