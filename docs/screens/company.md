@@ -1,0 +1,111 @@
+# 事業者（Company）画面
+
+## 事業者ホーム
+- 画面名: 事業者ホーム
+- 目的: 日々の運用で必要な情報と入口を提供する。
+- 想定ロール: Company
+- URL: /company
+- 関連Feature/SF: F04-SF01/02, F05-SF01
+- 主要導線:
+  - ログイン → /company
+  - /company/advances へ遷移
+- 表示項目:
+  - 未処理（requested + approved）件数カード
+  - 主要一覧へのショートカット（advances/drivers/worklogs）
+- 操作:
+  - 未処理カード → /company/advances（未処理フィルタ適用）
+- 状態:
+  - ローディング: 件数プレースホルダ
+  - エラー: 共通エラー表示
+- API参照:
+  - 集計APIを用意する方針（TBD）
+  - 集計APIは未処理件数（requested + approved）を返す
+  - 将来拡張で内訳（requested/approved別）を返せる余地を残す
+  - 例: GET /companies/{id}/advances/summary
+
+### 未処理カード
+- 未処理の定義: requested + approved
+- 表示内容: 未処理件数
+- 導線: /company/advances へ遷移（フィルタ適用）
+- URLクエリ仕様:
+  - /company/advances?status=requested,approved
+
+## 前借り申請一覧（1画面 + フィルタ）
+- 画面名: 前借り申請一覧
+- 目的: 前借り申請の確認と処理を1画面で完結する。
+- 想定ロール: Company
+- URL: /company/advances
+- 関連Feature/SF: F04-SF01, F04-SF02, F05-SF01
+- 主要導線:
+  - 事業者ホーム → /company/advances
+  - サイドナビ → /company/advances
+- フィルタ仕様（確定）:
+  - クエリキー: status
+  - 複数選択: カンマ区切り（例: /company/advances?status=requested,approved）
+  - 未指定時の挙動: 全件ではなく未処理（requested + approved）をデフォルト表示
+  - UI: チェックボックス複数選択
+  - UI: 「全選択」「全解除」ボタンはチェック状態のみ変更（検索は走らない）
+  - UI: チェック確定後に「検索」ボタン押下で一覧が更新される
+  - 初期状態: requested + approved が選択された状態
+  - URL更新: 検索ボタン押下時のみ status クエリを更新する
+  - チェックボックスON/OFFや全選択/全解除ではURL更新・検索実行はしない
+  - フォールバック: status が空/不正な場合は不正値を無視し未処理にフォールバック
+  - 空/不正の例: ?status=（空文字）, ?status=,（空要素のみ）, ?status=foo,approved（一部不正）
+  - 有効なステータスが0件の場合は未処理（requested + approved）へフォールバック
+  - フォールバック時はデバッグログ（warn相当）を出す方針とする
+- 一覧列:
+  - 申請日
+  - ドライバー名
+  - 金額
+  - ステータス（UIラベルは既存方針に従う）
+  - 操作（承認/否認/振込済みに更新）
+  - 否認理由（rejectReason、否認時のみ）
+- 操作:
+  - 承認: 確認ダイアログ
+  - 否認: 理由必須（空白NG/最大500）+ 確認ダイアログ
+  - 振込済みに更新: 確認ダイアログ
+  - 行単位ロック（処理中は当該行のみ非活性）
+- 状態:
+  - ローディング: スケルトンまたはローダー
+  - 空: 空状態メッセージ
+  - エラー: 共通エラー表示
+- 409: 二重実行/状態競合（「既に処理済みです」等のユーザー向け表示）
+- API参照:
+  - GET /companies/{id}/advances
+  - POST /advances/{id}/approve
+  - POST /advances/{id}/reject
+  - POST /advances/{id}/mark-paid
+  - OpenAPI: docs/spec/openapi_min.yaml
+
+## ドライバー一覧
+- 画面名: ドライバー一覧
+- 目的: 自社ドライバー（名前/メール）を確認できる。
+- 想定ロール: Company
+- URL: /company/drivers
+- 関連Feature/SF: F11-SF01
+- 表示項目:
+  - ドライバー名
+  - メールアドレス
+- 操作:
+  - 表示のみ（検索/ソート/ページングはTBD）
+- 状態:
+  - ローディング/空/エラー
+- API参照:
+  - TBD
+
+## 稼働登録
+- 画面名: 稼働登録
+- 目的: 案件と稼働実績を登録する。
+- 想定ロール: Company
+- URL: /company/worklogs
+- 関連Feature/SF: F10-SF01/02/03/04
+- 表示項目:
+  - 案件マスタ
+  - 稼働登録一覧
+- 操作:
+  - 案件マスタ登録
+  - 稼働登録
+- 状態:
+  - ローディング/空/エラー
+- API参照:
+  - TBD
