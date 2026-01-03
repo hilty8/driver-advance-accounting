@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "ts-node src/main.ts",
     "dev:reset": "npx prisma migrate dev && SEED_MODE=dev npm run db:seed",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.seed.json",
     "test:int": "jest -c jest.int.config.ts --runInBand",
     "test:scenario": "jest -c jest.scenario.config.ts --runInBand",
     "test:unit": "jest -c jest.unit.config.ts",
@@ -19,8 +19,10 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:reset": "prisma migrate reset",
-    "db:seed": "prisma db seed",
+    "db:seed": "node dist/prisma/seed.js",
+    "db:seed:dev": "ts-node prisma/seed.ts",
     "db:reset": "ts-node scripts/dbReset.ts",
+    "dev:reset": "npx prisma migrate dev && SEED_MODE=dev npm run db:seed:dev",
     "test": "jest",
     "lint": "echo 'lint not configured yet'"
   },

@@ -14,6 +14,7 @@ COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
 COPY backend/prisma ./prisma
 COPY backend/tsconfig.json ./
+COPY backend/tsconfig.seed.json ./
 COPY backend/src ./src
 RUN npx prisma generate
 RUN npm run build
@@ -27,6 +28,7 @@ COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/backend/prisma ./prisma
 COPY --from=build /app/backend/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/backend/prisma ./prisma
 COPY --from=build /app/backend/dist ./dist
 EXPOSE 3000
 CMD ["node", "dist/main.js"]
