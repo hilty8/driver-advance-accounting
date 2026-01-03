@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
   && rm -rf /var/lib/apt/lists/*
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev
+COPY --from=build /app/backend/prisma ./prisma
 COPY --from=build /app/backend/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/backend/dist ./dist
 EXPOSE 3000
