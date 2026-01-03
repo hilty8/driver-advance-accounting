@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "dev": "ts-node src/main.ts",
     "dev:reset": "npx prisma migrate dev && SEED_MODE=dev npm run db:seed",

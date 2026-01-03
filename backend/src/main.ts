@@ -1,8 +1,12 @@
-import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { startServer } from './http/server';
 import { prisma } from './repositories/prisma/client';
+
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('dotenv/config');
+}
 
 const loadLocalMigrationNames = () => {
   const migrationsDir = path.resolve(__dirname, '../prisma/migrations');

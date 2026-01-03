@@ -45,6 +45,11 @@
 - `docs/dev/local-frontend.md`
 - `docs/dev/testing.md`
 
+## Railwayデプロイ（Docker）
+
+- サービスは backend/frontend を分離し、それぞれの Dockerfile を指定する（`backend/Dockerfile`, `frontend/Dockerfile`）。
+- Prisma のマイグレーションは Railway の Release Command で `npx prisma migrate deploy` を実行する想定。
+
 ## テスト実行（Docker Postgres前提）
 
 1. テスト用DBを作成（例: `driver_advance_accounting_test`）

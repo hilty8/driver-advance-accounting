@@ -1,6 +1,9 @@
 {
   "name": "driver-advance-accounting",
   "private": true,
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "test:backend:unit": "npm --prefix backend run test:unit",
     "test:backend:int": "npm --prefix backend run test:int",
