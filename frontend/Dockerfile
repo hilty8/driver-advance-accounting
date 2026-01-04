@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 FROM node:20-slim AS build
 WORKDIR /app/frontend
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/next.config.ts ./
